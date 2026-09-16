@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2F6F8F">
+<title>Sugar diary</title>
+<style>
+:root{
+  --bg:#EEF3F6; --panel:#FFFFFF; --ink:#1D2935; --soft:#5C6B78; --line:#D5DEE4;
+  --brand:#2F6F8F; --brand-ink:#FFFFFF; --me:#D8EAF2; --bot:#FFFFFF; --ins:#6B4FA0; --ins-bg:#ECE6F6;
+  --ok:#2E8552; --ok-bg:#E1F2E7; --high:#B53434; --high-bg:#F8DEDE; --low:#B53434; --low-bg:#F8DEDE;
+  --empty:#F4F7F9; --miss-bg:#E4E7EB; --meal-bg:#E3EEF4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121A21; --panel:#1B252E; --ink:#E6EDF2; --soft:#9AA9B5; --line:#2C3A45;
+    --brand:#5FA6C8; --brand-ink:#0E1A22; --me:#23455A; --bot:#1F2B35; --ins:#B9A2E6; --ins-bg:#2C2540;
+    --ok:#6CC790; --ok-bg:#1D3A29; --high:#EF8080; --high-bg:#442222; --low:#EF8080; --low-bg:#442222;
+    --empty:#18212A; --miss-bg:#2A3038; --meal-bg:#1F3340;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121A21; --panel:#1B252E; --ink:#E6EDF2; --soft:#9AA9B5; --line:#2C3A45;
+  --brand:#5FA6C8; --brand-ink:#0E1A22; --me:#23455A; --bot:#1F2B35; --ins:#B9A2E6; --ins-bg:#2C2540;
+  --ok:#6CC790; --ok-bg:#1D3A29; --high:#EF8080; --high-bg:#442222; --low:#EF8080; --low-bg:#442222;
+  --empty:#18212A; --miss-bg:#2A3038; --meal-bg:#1F3340;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45}
+button,select,input{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.app{max-width:640px;margin:0 auto;height:100dvh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px}
+header h1{font-size:1.25rem;margin:0;font-weight:700}
+.tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:0;background:transparent;color:var(--soft);padding:6px 14px;border-radius:999px;font-weight:600}
+.tabs button[aria-selected="true"]{background:var(--brand);color:var(--brand-ink)}
+main{flex:1;min-height:0;display:flex;flex-direction:column}
+[hidden]{display:none!important}
+
+#chat{flex:1;min-height:0;display:flex;flex-direction:column}
+#log{flex:1;overflow-y:auto;padding:8px 14px 12px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:86%;padding:9px 13px;border-radius:16px;white-space:pre-line;word-wrap:break-word}
+.bot{background:var(--bot);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:5px}
+.me{background:var(--me);align-self:flex-end;border-bottom-right-radius:5px}
+.msg.ok{border-left:4px solid var(--ok)} .msg.high{border-left:4px solid var(--high)} .msg.low{border-left:4px solid var(--low)} .msg.ins{border-left:4px solid var(--ins)}
+.msg.alert{background:var(--low-bg);border-color:var(--low)}
+.day-sep{align-self:center;font-size:.8rem;color:var(--soft);padding:4px 0}
+#cardArea{padding:0 14px;max-height:62dvh;overflow-y:auto}
+#chips{display:flex;flex-wrap:wrap;gap:8px;padding:8px 14px}
+#chips:empty{padding:0}
+#chips button{border:1.5px solid var(--brand);background:var(--panel);color:var(--brand);padding:7px 14px;border-radius:999px;font-weight:600}
+#chips button.primary{background:var(--brand);color:var(--brand-ink)}
+form.composer{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--panel)}
+form.composer input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:11px 16px;font-size:1.05rem}
+form.composer button{border:0;background:var(--brand);color:var(--brand-ink);border-radius:999px;padding:0 18px;font-weight:700}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:4px 0 8px}
+.card h3{margin:0 0 4px;font-size:1rem}
+.hours{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
+.hours button{border:1px solid var(--line);background:var(--empty);color:var(--ink);border-radius:8px;padding:8px 2px;font-size:.88rem}
+.hours button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink);font-weight:700}
+.row{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;margin:6px 0}
+.row b{font-size:.92rem}
+select,.card input{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px;min-width:0;width:100%}
+.dose{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dose label{font-size:.8rem;color:var(--soft);display:flex;flex-direction:column;gap:3px}
+.dose .rm{grid-column:1/-1;justify-self:end;border:0;background:transparent;color:var(--low);font-weight:600}
+.lim{display:grid;grid-template-columns:1fr 96px;gap:8px;align-items:center;margin:6px 0}
+.err{color:var(--low);font-size:.9rem;margin:6px 0 0}
+
+#diary{flex:1;overflow-y:auto;padding:4px 14px 32px}
+.section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.section h2{font-size:1.05rem;margin:0 0 10px}
+.note{color:var(--soft);font-size:.9rem;margin:6px 0 0}
+.today{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.slotcard{border-radius:10px;padding:10px;background:var(--empty);border:1px dashed var(--line)}
+.slotcard .n{font-size:.83rem;color:var(--soft)}
+.slotcard .v{font-size:1.5rem;font-weight:700;line-height:1.2}
+.slotcard .u{font-size:.83rem;color:var(--soft)}
+.s-ok{background:var(--ok-bg);border:1px solid transparent} .s-ok .v{color:var(--ok)}
+.s-high{background:var(--high-bg);border:1px solid transparent} .s-high .v{color:var(--high)}
+.s-low{background:var(--low-bg);border:1px solid transparent} .s-low .v{color:var(--low)}
+.s-ins{background:var(--ins-bg);border:1px solid transparent} .s-ins .v{color:var(--ins)}
+.s-miss{background:var(--miss-bg);border:1px solid transparent} .s-miss .v{color:var(--soft)}
+.s-meal{background:var(--meal-bg);border:1px solid transparent}
+th.mealh{color:var(--brand)}
+.tag{font-size:.72rem;font-weight:700;margin-left:4px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.stat b{display:block;font-size:1.4rem}
+.stat span{color:var(--soft);font-size:.88rem}
+.scroll{overflow-x:auto}
+table{border-collapse:separate;border-spacing:3px;font-size:.88rem}
+th{font-weight:600;color:var(--soft);text-align:center;padding:4px;font-size:.78rem;vertical-align:bottom;min-width:62px}
+th.insh{color:var(--ins)}
+th.d,td.d{text-align:left;white-space:nowrap;color:var(--ink);font-weight:600;position:sticky;left:0;background:var(--panel)}
+td.c{text-align:center;border-radius:7px;padding:6px 4px;background:var(--empty);vertical-align:top}
+td.c b{display:block;font-size:1rem}
+td.c small{display:block;color:var(--soft);font-size:.75rem}
+td.c.s-ok b{color:var(--ok)} td.c.s-high b{color:var(--high)} td.c.s-low b{color:var(--low)} td.c.s-ins b{color:var(--ins)} td.c.s-miss b{color:var(--soft)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--soft);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn{border:1.5px solid var(--brand);background:var(--panel);color:var(--brand);padding:9px 16px;border-radius:10px;font-weight:600}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.danger{border-color:var(--low);color:var(--low)}
+.entries{list-style:none;margin:0;padding:0}
+.entries li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.entries button{border:0;background:transparent;color:var(--low);font-weight:600;padding:4px 6px}
+details.set{border-top:1px solid var(--line);padding:10px 0}
+details.set summary{cursor:pointer;font-weight:600}
+svg text{fill:var(--soft);font-size:10px;font-family:inherit}
+.status{font-size:.9rem;color:var(--soft);margin-top:8px}
+@media (prefers-reduced-motion: no-preference){ .msg{animation:pop .18s ease-out} @keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Sugar diary</h1>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabChat" aria-selected="true">Chat</button>
+      <button role="tab" id="tabDiary" aria-selected="false">Diary</button>
+    </div>
+  </header>
+  <main>
+    <section id="chat">
+      <div id="log" aria-live="polite"></div>
+      <div id="cardArea"></div>
+      <div id="chips"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="input" type="text" enterkeyhint="send" placeholder="Type a sugar reading, e.g. 112" aria-label="Message">
+        <button type="submit">Send</button>
+      </form>
+    </section>
+    <section id="diary" hidden></section>
+  </main>
+</div>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+
+<script>
+(function(){
+"use strict";
+const STANDALONE = !(window.claude && typeof window.claude.use === "function");
+const KEY = "sugarDiary.v2";
+const CHECK_LABELS = ["Fasting","After breakfast","Before lunch","After lunch","Before dinner","After dinner","Bedtime","Night"];
+const DOSE_LABELS = ["Before breakfast","Before lunch","Before dinner","Night","Morning","Other"];
+const MEALS = ["breakfast","lunch","dinner"];
+const WINDOWS = {breakfast:[8*60, 11*60], lunch:[12*60, 15*60], dinner:[19*60, 22*60]};
+const PRESETS = {
+  pregnancy1:{fasting:95, after:140, low:70, veryHigh:200},
+  pregnancy2:{fasting:95, after:120, low:70, veryHigh:200},
+  normal:{fasting:130, after:180, low:70, veryHigh:250}
+};
+const LIBS = {
+  excel: {src:["lib/exceljs.min.js","https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"], ready:()=>!!window.ExcelJS},
+  jspdf: {src:["lib/jspdf.umd.min.js","https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"], ready:()=>!!(window.jspdf && window.jspdf.jsPDF)},
+  autotable: {src:["lib/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"], ready:()=>!!(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable)}
+};
+
+/* ================= storage ================= */
+function blank(){ return {setup:null, entries:[], chat:[], lastBackup:null, backupAsked:null, snoozeDays:{}, reportName:"", profile:null}; }
+let S = blank();
+try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(blank(), JSON.parse(raw)); } catch(e){ S = blank(); }
+let storageOk = true;
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); storageOk = true; } catch(e){ storageOk = false; } }
+function migrate(){
+  if (!S.setup) return;
+  if (S.setup.postMealHours == null) S.setup.postMealHours = (S.setup.mode==="pregnancy" && S.setup.limits && S.setup.limits.after===140) ? 1 : 2;
+  if (!S.setup.startedOn){
+    const first = S.entries.map(e=>e.date).sort()[0];
+    S.setup.startedOn = first || today();
+    S.setup.startedHour = first ? 0 : new Date().getHours();
+  }
+  if (!S.snoozeDays) S.snoozeDays = {};
+  if (!S.profile) S.profile = {name:S.reportName||"", dob:"", age:null, gender:""};
+  save();
+}
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,"0");
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+function ymd(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function today(){ return ymd(new Date()); }
+function daysAgo(n){ const d = new Date(); d.setDate(d.getDate()-n); return ymd(d); }
+function nowHM(){ const d = new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+function hourLabel(h){ const hh = h%12===0 ? 12 : h%12; return hh+" "+(h<12?"AM":"PM"); }
+function timeLabel(hm){ const [h,m] = hm.split(":").map(Number); const hh = h%12===0?12:h%12; return hh+":"+pad(m)+" "+(h<12?"AM":"PM"); }
+function prettyDate(s){ const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}); }
+function dayText(date){ return date===today() ? "Today" : date===daysAgo(1) ? "Yesterday ("+prettyDate(date)+")" : prettyDate(date); }
+function hourOf(hm){ return Number(hm.split(":")[0]); }
+function minOf(hm){ const [h,m] = hm.split(":").map(Number); return h*60+m; }
+function hmOf(min){ min = Math.max(0, Math.min(23*60+59, min)); return pad(Math.floor(min/60))+":"+pad(min%60); }
+function hourGap(a,b){ const g = Math.abs(a-b); return Math.min(g, 24-g); }
+function durText(m){ const h = Math.floor(m/60), r = m%60; return (h ? h+" hr" : "") + (h && r ? " " : "") + (r ? r+" min" : (h ? "" : "0 min")); }
+function el(tag, attrs, text){
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs){ if (k==="hidden"){ if (attrs[k]) e.hidden = true; } else e.setAttribute(k, attrs[k]); }
+  if (text != null) e.textContent = text;
+  return e;
+}
+function guessLabel(h){
+  if (h>=0 && h<=5) return "Night";
+  if (h<=8) return "Fasting";
+  if (h<=11) return "After breakfast";
+  if (h===12) return "Before lunch";
+  if (h<=16) return "After lunch";
+  if (h<=19) return "Before dinner";
+  if (h<=22) return "After dinner";
+  return "Bedtime";
+}
+function guessDose(h){
+  if (h>=5 && h<=10) return "Before breakfast";
+  if (h>=11 && h<=15) return "Before lunch";
+  if (h>=16 && h<=20) return "Before dinner";
+  return "Night";
+}
+function checks(){ return [...S.setup.checks].sort((a,b)=>a.hour-b.hour); }
+function doses(){ return S.setup.insulin.on ? [...S.setup.insulin.doses].sort((a,b)=>a.hour-b.hour) : []; }
+function mealOfCheck(label){ const m = /^after (breakfast|lunch|dinner)$/i.exec(label); return m ? m[1].toLowerCase() : null; }
+function mealOfDose(d){ const m = /^before (breakfast|lunch|dinner)$/i.exec(d.label); return m ? m[1].toLowerCase() : null; }
+function checkForMeal(meal){ return checks().find(c => mealOfCheck(c.label)===meal) || null; }
+function dosesForMeal(meal){ return doses().filter(d => mealOfDose(d)===meal); }
+function sugars(){ return S.entries.filter(e=>e.kind==="sugar"); }
+function shots(){ return S.entries.filter(e=>e.kind==="insulin"); }
+function sugarFor(date, c){ return c ? sugars().find(e => e.date===date && e.checkId===c.id) : null; }
+function shotFor(date, d){ return shots().find(e => e.date===date && e.doseId===d.id); }
+function mealEntry(date, meal){ return S.entries.find(e => e.kind==="meal" && e.date===date && e.meal===meal); }
+function missedFor(date, id){ return S.entries.find(e => e.kind==="missed" && e.date===date && e.itemId===id); }
+function isAfterKind(label){ return /after/i.test(label) || label==="Random check"; }
+function statusOf(value, label){
+  const L = S.setup.limits;
+  const max = isAfterKind(label) ? L.after : L.fasting;
+  if (L.low!=null && value < L.low) return "low";
+  if (max!=null && value > max) return "high";
+  return max!=null ? "ok" : "none";
+}
+function isExtreme(v){ const L = S.setup.limits; return (L.low!=null && v < L.low) ? "low" : (L.veryHigh!=null && v > L.veryHigh) ? "high" : null; }
+function doseText(d){ return d.label + (d.drug ? " ("+d.drug+")" : ""); }
+function sortEntries(){ S.entries.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time)); }
+function commit(e){ e.id = uid(); e.at = new Date().toISOString(); S.entries.push(e); sortEntries(); save(); renderDiary(); return e; }
+function removeWhere(fn){ S.entries = S.entries.filter(e => !fn(e)); save(); }
+
+/* ================= chat display ================= */
+function addMsg(who, text, tone){
+  S.chat.push({who, text, tone: tone||"", at: Date.now()});
+  if (S.chat.length > 250) S.chat = S.chat.slice(-250);
+  save(); renderLog();
+}
+function renderLog(){
+  const log = $("log"); log.textContent = "";
+  let lastDay = "";
+  S.chat.forEach(m => {
+    const day = ymd(new Date(m.at));
+    if (day !== lastDay){ log.appendChild(el("div",{class:"day-sep"}, day===today() ? "Today" : prettyDate(day))); lastDay = day; }
+    log.appendChild(el("div",{class:"msg "+(m.who==="me"?"me":"bot")+(m.tone?" "+m.tone:"")}, m.text));
+  });
+  log.scrollTop = log.scrollHeight;
+}
+function setChips(list){
+  const box = $("chips"); box.textContent = "";
+  list.forEach(c => {
+    const b = el("button",{type:"button", class: c.primary ? "primary" : ""}, c.label);
+    b.addEventListener("click", () => { addMsg("me", c.say || c.label); c.run(); });
+    box.appendChild(b);
+  });
+}
+function setCard(node){ const a = $("cardArea"); a.textContent = ""; if (node) a.appendChild(node); }
+
+/* ================= question engine ================= */
+const CANCEL = {cancel:true};
+let asker = null;
+let running = false;
+let inSetup = false;
+function ask(text, choices, opt){
+  opt = opt || {};
+  return new Promise((resolve, reject) => {
+    if (text) addMsg("bot", text, opt.tone);
+    asker = {resolve, reject, opt};
+    const list = choices.map(c => ({label:c.label, say:c.say, primary:c.primary, run:()=>{ asker = null; resolve(c.value); }}));
+    if (!opt.noCancel) list.push({label:"Stop", run:()=>{ asker = null; reject(CANCEL); }});
+    setChips(list);
+  });
+}
+function askNum(text, min, max, err, choices){ return ask(text, choices || [], {number:{min, max, err}}); }
+async function askTime(text, options, o){
+  o = o || {};
+  const ctx = o.ctx || {date: today()};
+  const early = new Date().getHours() < 6;
+  const validate = hm => (o.notBefore && hm < o.notBefore) ? "It should be after "+timeLabel(o.notBefore)+"." : null;
+  const future = hm => ctx.date === today() && hm > nowHM();
+  const choices = [];
+  const seen = new Set();
+  if (ctx.date === today() && !o.noNow){ choices.push({label:"Now ("+timeLabel(nowHM())+")", say:timeLabel(nowHM()), value:nowHM()}); seen.add(nowHM()); }
+  (options||[]).forEach(x => { if (!validate(x.hm) && (early || !future(x.hm)) && !seen.has(x.hm)){ seen.add(x.hm); choices.push({label:x.label || timeLabel(x.hm), say:timeLabel(x.hm), value:x.hm, primary:x.primary}); } });
+  choices.push({label:"Type a time", value:"__type"});
+  if (o.allowNull) choices.push({label:o.nullLabel || "Not sure", value:"__null"});
+  const nullChoice = o.allowNull ? [{label:o.nullLabel || "Not sure", value:"__null"}] : [];
+  let v = await ask(text, choices, {time:{validate}});
+  for (;;){
+    if (v === "__type"){ v = await ask("Type the time like 8:30 am or 11 pm.", nullChoice, {time:{validate}}); continue; }
+    if (typeof v === "string" && v.indexOf("__h:") === 0){
+      const h = Number(v.slice(4));
+      v = await ask("Is that "+h+" AM or "+h+" PM?", [
+        {label:h+" AM", value: pad(h===12 ? 0 : h)+":00"},
+        {label:h+" PM", value: pad(h===12 ? 12 : h+12)+":00"}
+      ], {time:{validate}});
+      continue;
+    }
+    if (v === "__null") return null;
+    if (future(v)){
+      const y = daysAgo(1);
+      const ok = await ask(timeLabel(v)+" hasn't come yet today. Was it last night ("+prettyDate(y)+")?", [
+        {label:"Yes, "+prettyDate(y)+" at "+timeLabel(v), value:true, primary:true},
+        {label:"No, let me re-type", value:false}
+      ]);
+      if (!ok){ v = "__type"; continue; }
+      ctx.date = y;
+    }
+    return v;
+  }
+}
+function windowOptions(meal, suggest){
+  const [a,b] = WINDOWS[meal]; const out = [];
+  for (let m=a; m<=b; m+=30) out.push({hm:hmOf(m), primary: suggest===hmOf(m)});
+  return out;
+}
+function afterOptions(meal, mealTime, check){
+  if (!mealTime) return check ? [{hm:pad(check.hour)+":00"}] : [];
+  const target = S.setup.postMealHours*60;
+  return [60,90,120,150,180].map(off => ({hm:hmOf(minOf(mealTime)+off), label:timeLabel(hmOf(minOf(mealTime)+off))+" ("+durText(off)+" after "+meal+")", primary: off===target}));
+}
+async function askDate(){
+  const choices = [1,2,3,4,5,6].map(n => ({label: n===1 ? "Yesterday" : prettyDate(daysAgo(n)), value:daysAgo(n)}));
+  choices.push({label:"Type a date", value:"__type"});
+  let v = await ask("Which day was it?", choices, {date:true});
+  while (v === "__type") v = await ask("Type the date like 14/9.", [], {date:true});
+  return v;
+}
+function parseClock(t){
+  const m = t.toLowerCase().replace(/\s+/g," ").match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/);
+  if (!m) return null;
+  let h = Number(m[1]); const mi = m[2] ? Number(m[2]) : 0;
+  const ap = m[3] ? m[3][0] : null;
+  if (!m[2] && !ap) return null;
+  if (ap){ if (h<1 || h>12) return null; if (ap==="p" && h<12) h += 12; if (ap==="a" && h===12) h = 0; }
+  if (h>23 || mi>59) return null;
+  return pad(h)+":"+pad(mi);
+}
+function parseDM(t){
+  const m = t.match(/^\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*$/);
+  if (!m) return null;
+  const now = new Date(); const dt = new Date(now.getFullYear(), Number(m[2])-1, Number(m[1]));
+  if (dt.getDate() !== Number(m[1])) return null;
+  if (ymd(dt) > today()) dt.setFullYear(dt.getFullYear()-1);
+  return ymd(dt);
+}
+function stopAsking(){ if (asker){ const a = asker; asker = null; a.reject(CANCEL); } }
+async function run(fn){
+  if (running) return;
+  running = true; setCard(null);
+  try {
+    const ref = await fn();
+    await followUps(ref);
+  } catch(e){
+    if (e === CANCEL) addMsg("bot","Stopped. Anything already saved is kept.");
+    else { console.error(e); addMsg("bot","Something went wrong. Please try again."); }
+  } finally {
+    running = false; asker = null; renderDiary(); idleChips();
+  }
+}
+function idleChips(){
+  if (!S.setup || running || inSetup) return;
+  const list = [];
+  if (S.setup.insulin.on) list.push({label:"Log insulin", run:()=>run(insulinButton)});
+  list.push({label:"Show diary", run:()=>{ showTab("diary"); }});
+  list.push({label:"Today so far", run:()=>{ todaySummary(); }});
+  list.push({label:"Undo last", run:undoLast});
+  setChips(list);
+}
+
+/* ================= editors ================= */
+function checksEditor(current, onSave, saveText){
+  const card = el("div",{class:"card"});
+  card.appendChild(el("h3",null,"When does she usually check sugar?"));
+  card.appendChild(el("p",{class:"note"},"Tap every hour she usually checks. Then name each check below."));
+  const chosen = new Map(current.map(c => [c.hour, {label:c.label, id:c.id}]));
+  const grid = el("div",{class:"hours"});
+  const list = el("div");
+  const err = el("p",{class:"err"});
+  function drawList(){
+    list.textContent = "";
+    [...chosen.keys()].sort((a,b)=>a-b).forEach(h => {
+      const r = el("div",{class:"row"});
+      r.appendChild(el("b",null,hourLabel(h)));
+      const sel = el("select",{"aria-label":"Name for "+hourLabel(h)+" check"});
+      CHECK_LABELS.forEach(l => { const o = el("option",{value:l},l); if (l===chosen.get(h).label) o.selected = true; sel.appendChild(o); });
+      sel.addEventListener("change", () => { chosen.get(h).label = sel.value; });
+      r.appendChild(sel); list.appendChild(r);
+    });
+  }
+  for (let h=0; h<24; h++){
+    const b = el("button",{type:"button","aria-pressed":String(chosen.has(h))}, hourLabel(h));
+    b.addEventListener("click", () => {
+      if (chosen.has(h)) chosen.delete(h); else chosen.set(h, {label:guessLabel(h), id:null});
+      b.setAttribute("aria-pressed", String(chosen.has(h))); drawList();
+    });
+    grid.appendChild(b);
+  }
+  card.appendChild(grid); card.appendChild(list); drawList();
+  const btn = el("button",{type:"button",class:"btn primary"}, saveText || "Save check times");
+  btn.addEventListener("click", () => {
+    const out = [...chosen.entries()].map(([h,v]) => ({id: v.id || uid(), hour:h, label:v.label}));
+    if (!out.length){ err.textContent = "Pick at least one hour."; return; }
+    const names = out.map(o=>o.label);
+    if (new Set(names).size !== names.length){ err.textContent = "Two checks have the same name. Give each hour a different name."; return; }
+    err.textContent = ""; onSave(out);
+  });
+  const br = el("div",{class:"btnrow"}); br.appendChild(btn); card.appendChild(br); card.appendChild(err);
+  return card;
+}
+function dosesEditor(current, onSave, saveText){
+  const card = el("div",{class:"card"});
+  card.appendChild(el("h3",null,"Insulin doses from the prescription"));
+  card.appendChild(el("p",{class:"note"},"Add each dose. Change the units here whenever the doctor changes them. Doses named \"Before breakfast / lunch / dinner\" are recorded together with that meal."));
+  const rows = current.map(d => Object.assign({}, d));
+  const box = el("div"); const err = el("p",{class:"err"});
+  function draw(){
+    box.textContent = "";
+    rows.forEach((d, i) => {
+      const r = el("div",{class:"dose"});
+      const l1 = el("label",null,"When"); const s1 = el("select");
+      DOSE_LABELS.forEach(x => { const o = el("option",{value:x},x); if (x===d.label) o.selected = true; s1.appendChild(o); });
+      s1.addEventListener("change", ()=> d.label = s1.value); l1.appendChild(s1);
+      const l2 = el("label",null,"Usual time"); const s2 = el("select");
+      for (let h=0; h<24; h++){ const o = el("option",{value:String(h)},hourLabel(h)); if (h===d.hour) o.selected = true; s2.appendChild(o); }
+      s2.addEventListener("change", ()=> d.hour = Number(s2.value)); l2.appendChild(s2);
+      const l3 = el("label",null,"Medicine name (optional)"); const i3 = el("input",{type:"text",placeholder:"e.g. Lantus"}); i3.value = d.drug||"";
+      i3.addEventListener("input", ()=> d.drug = i3.value.trim()); l3.appendChild(i3);
+      const l4 = el("label",null,"Units"); const i4 = el("input",{type:"number",inputmode:"numeric",min:"1",max:"150"}); if (d.units!=null) i4.value = d.units;
+      i4.addEventListener("input", ()=> d.units = i4.value==="" ? null : Number(i4.value)); l4.appendChild(i4);
+      const rm = el("button",{type:"button",class:"rm"},"Remove this dose");
+      rm.addEventListener("click", ()=>{ rows.splice(i,1); draw(); });
+      [l1,l2,l3,l4,rm].forEach(x=>r.appendChild(x)); box.appendChild(r);
+    });
+  }
+  draw(); card.appendChild(box);
+  const add = el("button",{type:"button",class:"btn"},"Add a dose");
+  add.addEventListener("click", ()=>{ const h = rows.length ? (rows[rows.length-1].hour+4)%24 : 8; rows.push({id:uid(), label:guessDose(h), hour:h, drug:"", units:null}); draw(); });
+  const sv = el("button",{type:"button",class:"btn primary"}, saveText || "Save doses");
+  sv.addEventListener("click", ()=>{
+    if (rows.some(d => !(d.units>=1 && d.units<=150))){ err.textContent = "Every dose needs units between 1 and 150."; return; }
+    const keys = rows.map(d=>d.label+"|"+(d.drug||"").toLowerCase());
+    if (new Set(keys).size !== keys.length){ err.textContent = "Two doses have the same name and medicine. Change one of them."; return; }
+    err.textContent = ""; onSave(rows.map(d=>({id:d.id||uid(), label:d.label, hour:d.hour, drug:d.drug||"", units:d.units})));
+  });
+  const br = el("div",{class:"btnrow"}); br.appendChild(add); br.appendChild(sv);
+  card.appendChild(br); card.appendChild(err);
+  return card;
+}
+function limitsEditor(current, onSave, saveText){
+  const card = el("div",{class:"card"});
+  card.appendChild(el("h3",null,"Sugar limits (mg/dL)"));
+  card.appendChild(el("p",{class:"note"},"These are common starting numbers. Change them to the numbers her doctor gave."));
+  const err = el("p",{class:"err"});
+  const mk = (label, val) => { const r = el("div",{class:"lim"}); r.appendChild(el("span",null,label)); const i = el("input",{type:"number",inputmode:"numeric",min:"30",max:"500"}); i.value = val; r.appendChild(i); card.appendChild(r); return i; };
+  const f = mk("Fasting / before-meal: highest OK", current.fasting);
+  const a = mk("After-meal: highest OK", current.after);
+  const l = mk("Low: ask to confirm below", current.low);
+  const v = mk("Very high: ask to confirm above", current.veryHigh);
+  const sv = el("button",{type:"button",class:"btn primary"}, saveText || "Save limits");
+  sv.addEventListener("click", ()=>{
+    const n = [f,a,l,v].map(i=>Number(i.value));
+    if (n.some(x => !(x>=30 && x<=500))){ err.textContent = "Each limit must be a number between 30 and 500."; return; }
+    if (!(n[2] < n[0] && n[0] <= n[1] && n[1] < n[3])){ err.textContent = "The order should be: low line, then fasting limit, then after-meal limit, then very-high line."; return; }
+    err.textContent = ""; onSave({fasting:n[0], after:n[1], low:n[2], veryHigh:n[3]});
+  });
+  const br = el("div",{class:"btnrow"}); br.appendChild(sv); card.appendChild(br); card.appendChild(err);
+  return card;
+}
+function mealHoursEditor(){
+  const card = el("div",{class:"card"});
+  card.appendChild(el("p",{class:"note"},"After-meal checks should be taken this long after eating. Checks taken earlier or later get a note in the diary."));
+  const sel = el("select");
+  [[1,"1 hour after eating"],[2,"2 hours after eating"]].forEach(([v,t])=>{ const o = el("option",{value:String(v)},t); if (v===S.setup.postMealHours) o.selected = true; sel.appendChild(o); });
+  card.appendChild(sel);
+  const sv = el("button",{type:"button",class:"btn primary"},"Save");
+  sv.addEventListener("click", ()=>{ S.setup.postMealHours = Number(sel.value); save(); renderDiary(); setStatus("After-meal timing saved. Existing notes stay as they were recorded."); });
+  const br = el("div",{class:"btnrow"}); br.appendChild(sv); card.appendChild(br);
+  return card;
+}
+
+/* ================= personal details ================= */
+function ageFrom(dob){
+  if (!dob) return null;
+  const [y,m,d] = dob.split("-").map(Number); const now = new Date();
+  let a = now.getFullYear() - y;
+  if (now.getMonth()+1 < m || (now.getMonth()+1 === m && now.getDate() < d)) a--;
+  return a >= 0 && a < 130 ? a : null;
+}
+function profileAge(p){ return p && p.dob ? ageFrom(p.dob) : (p ? p.age : null); }
+function profileText(p){
+  if (!p) return "";
+  const parts = [];
+  if (p.name) parts.push("Name: "+p.name);
+  const age = profileAge(p);
+  if (age != null) parts.push("Age: "+age+(p.dob ? " (born "+prettyDate(p.dob).replace(/^\w+, /,"")+" "+p.dob.slice(0,4)+")" : ""));
+  if (p.gender) parts.push("Gender: "+p.gender);
+  return parts.join("   |   ");
+}
+function profileEditor(current, onSave, saveText){
+  const p = Object.assign({name:"", dob:"", age:null, gender:""}, current||{});
+  const card = el("div",{class:"card"});
+  card.appendChild(el("h3",null,"Personal details"));
+  card.appendChild(el("p",{class:"note"},"These appear at the top of the doctor's report."));
+  const err = el("p",{class:"err"});
+  const row = (label, input) => { const r = el("div",{class:"lim"}); r.style.gridTemplateColumns = "1fr 1.3fr"; r.appendChild(el("span",null,label)); r.appendChild(input); card.appendChild(r); return input; };
+  const iName = row("Name", el("input",{type:"text",autocomplete:"name"})); iName.value = p.name;
+  const iDob = row("Date of birth", el("input",{type:"date",max:today()})); iDob.value = p.dob;
+  const iAge = row("Age (years)", el("input",{type:"number",inputmode:"numeric",min:"1",max:"120"}));
+  const sync = () => { const a = ageFrom(iDob.value); if (a != null){ iAge.value = a; iAge.disabled = true; } else { iAge.disabled = false; } };
+  if (p.age != null) iAge.value = p.age;
+  iDob.addEventListener("change", sync); sync();
+  const sel = el("select");
+  ["","Female","Male","Other","Prefer not to say"].forEach(g => { const o = el("option",{value:g}, g || "Choose…"); if (g===p.gender) o.selected = true; sel.appendChild(o); });
+  row("Gender", sel);
+  const sv = el("button",{type:"button",class:"btn primary"}, saveText || "Save details");
+  sv.addEventListener("click", ()=>{
+    const name = iName.value.trim();
+    if (!name){ err.textContent = "Please enter a name."; return; }
+    const dob = iDob.value;
+    if (dob && dob > today()){ err.textContent = "Date of birth can't be in the future."; return; }
+    let age = dob ? ageFrom(dob) : (iAge.value === "" ? null : Number(iAge.value));
+    if (age != null && !(age >= 1 && age <= 120)){ err.textContent = "Age should be between 1 and 120."; return; }
+    if (!sel.value){ err.textContent = "Please choose a gender option."; return; }
+    err.textContent = "";
+    onSave({name, dob, age, gender:sel.value});
+  });
+  const br = el("div",{class:"btnrow"}); br.appendChild(sv); card.appendChild(br); card.appendChild(err);
+  return card;
+}
+
+/* ================= setup ================= */
+let draft = null;
+function startSetup(){
+  inSetup = true; setCard(null);
+  draft = {mode:null, postMealHours:2, checks:[], insulin:{on:false, doses:[]}, limits:null};
+  addMsg("bot","Hi! This replaces the paper sugar log. Setup takes about a minute.\n\nFirst, a few personal details for the doctor's report.");
+  setChips([]);
+  setCard(profileEditor(S.profile, p => {
+    S.profile = p; save(); setCard(null);
+    addMsg("bot","Saved: "+profileText(p).replace(/   \|   /g,", ")+".");
+    if (p.gender === "Male"){ draft.mode = "normal"; askAfterHours(); return; }
+    addMsg("bot","Is this for pregnancy (gestational) diabetes or regular diabetes?");
+    setChips([
+      {label:"Pregnancy", run:()=>{ draft.mode="pregnancy"; askAfterHours(); }},
+      {label:"Regular diabetes", run:()=>{ draft.mode="normal"; askAfterHours(); }}
+    ]);
+  }, "Save and continue"));
+}
+function askAfterHours(){
+  addMsg("bot","After meals, does the doctor want the sugar checked 1 hour or 2 hours after eating? I'll note in the diary when a check is earlier or later than that.");
+  const pick = h => { draft.postMealHours = h; draft.limits = Object.assign({}, draft.mode==="pregnancy" ? (h===1 ? PRESETS.pregnancy1 : PRESETS.pregnancy2) : PRESETS.normal); askChecks(); };
+  setChips([
+    {label:"1 hour after", run:()=>pick(1)},
+    {label:"2 hours after", run:()=>pick(2)},
+    {label:"Not sure", run:()=>{ addMsg("bot","I'll use 1 hour for now. You can change it later in Settings."); pick(1); }}
+  ]);
+}
+function askChecks(){
+  addMsg("bot","Now pick the hours she usually checks sugar. She can still record a random check at any time.");
+  setChips([]);
+  setCard(checksEditor([], out => {
+    draft.checks = out; setCard(null);
+    addMsg("bot","Checks saved:\n"+out.sort((a,b)=>a.hour-b.hour).map(c=>hourLabel(c.hour)+" – "+c.label).join("\n"));
+    askInsulin();
+  }, "Save and continue"));
+}
+function askInsulin(){
+  addMsg("bot","Does she take insulin?");
+  setChips([
+    {label:"Yes", run:()=>{
+      draft.insulin.on = true;
+      addMsg("bot","Add each dose from the prescription, for example Before breakfast 22 units, or Night (Lantus) 35 units.");
+      setChips([]);
+      setCard(dosesEditor([{id:uid(), label:"Before breakfast", hour:8, drug:"", units:null}], out => {
+        draft.insulin.doses = out; setCard(null);
+        addMsg("bot","Doses saved:\n"+out.sort((a,b)=>a.hour-b.hour).map(d=>hourLabel(d.hour)+" – "+doseText(d)+": "+d.units+" units").join("\n"));
+        askLimits();
+      }, "Save and continue"));
+    }},
+    {label:"No", run:()=>{ draft.insulin.on = false; askLimits(); }}
+  ]);
+}
+function askLimits(){
+  addMsg("bot","Last step: check the sugar limits. Readings below the low line or above the very-high line will ask for confirmation first.");
+  setChips([]);
+  setCard(limitsEditor(draft.limits, out => { draft.limits = out; setCard(null); finishSetup(); }, "Finish setup"));
+}
+function finishSetup(){
+  draft.startedOn = today(); draft.startedHour = new Date().getHours();
+  S.setup = draft; draft = null; inSetup = false; save();
+  addMsg("bot","All set.\n\nHow to use it:\n• Type any number, like 120. I'll ask whether it's sugar" + (S.setup.insulin.on ? " or insulin" : "") + ".\n• For breakfast, lunch and dinner I record three things together: the insulin before the meal, the meal time, and the sugar after the meal, each with its time.\n• Fasting and random checks record only the sugar and its time.\n• If anything earlier is missing, I'll ask about it.\n• Type \"diary\" for the full log and the doctor's report.");
+  renderDiary(); idleChips();
+}
+
+/* ================= input ================= */
+function handleText(raw){
+  const text = raw.trim(); if (!text) return;
+  addMsg("me", text);
+  const lower = text.toLowerCase();
+  const isNum = /^\s*\d+(\.\d+)?\s*(mg\/?dl|units?|u)?\s*$/i.test(text);
+  const num = isNum ? parseFloat(text) : NaN;
+
+  if (!S.setup){ if (!inSetup) startSetup(); else addMsg("bot","Please finish the setup using the buttons or the form above."); return; }
+
+  if (/^(cancel|stop)$/.test(lower)){ if (asker) stopAsking(); else addMsg("bot","Nothing to stop."); return; }
+  if (!isNum && !(asker && asker.opt.time && parseClock(text))){
+    const later = fn => { stopAsking(); setTimeout(fn, 0); };
+    if (/(dashboard|diary|report)/.test(lower)) return later(()=>{ showTab("diary"); });
+    if (/^(today|status)/.test(lower)) return later(todaySummary);
+    if (/^undo/.test(lower)) return later(undoLast);
+    if (/^backup/.test(lower)) return later(doBackup);
+    if (/^help/.test(lower)){ addMsg("bot","• Type a number to record sugar or insulin\n• \"insulin\" – record a dose\n• \"diary\" – full log and doctor's report\n• \"today\" – what's done today\n• \"undo\" – remove the last entry\n• \"backup\" – save a backup file\n• \"stop\" – stop the current questions"); return; }
+    if (!asker && /(insulin|lantus|dose)/.test(lower)) return run(insulinButton);
+  }
+  if (asker){
+    const o = asker.opt;
+    if (o.number){
+      if (isNum && num >= o.number.min && num <= o.number.max){ const a = asker; asker = null; return a.resolve(Math.round(num*10)/10); }
+      addMsg("bot", o.number.err); return;
+    }
+    if (o.time){
+      const bare = /^\s*(\d{1,2})\s*$/.exec(text);
+      if (bare && Number(bare[1]) >= 1 && Number(bare[1]) <= 12){ const a = asker; asker = null; return a.resolve("__h:"+Number(bare[1])); }
+      const hm = parseClock(text);
+      if (!hm){ addMsg("bot","Please type the time like 8:30 am or 1:15 pm."); return; }
+      const err = o.time.validate(hm);
+      if (err){ addMsg("bot", err); return; }
+      const a = asker; asker = null; return a.resolve(hm);
+    }
+    if (o.date){
+      const d = parseDM(text);
+      if (!d){ addMsg("bot","Please type the date like 14/9."); return; }
+      if (d < S.setup.startedOn && !confirm("That's before the diary started. Record it anyway?")) return;
+      const a = asker; asker = null; return a.resolve(d);
+    }
+    addMsg("bot","Please answer with the buttons below, or type \"stop\".");
+    return;
+  }
+  if (isNum) return run(() => logNumber(num));
+  addMsg("bot","I didn't catch that. Type a number (like 120), or \"help\".");
+}
+
+/* ================= logging flows ================= */
+async function logNumber(num){
+  if (!(num > 0 && num <= 600)){ addMsg("bot","That number looks wrong. Please check it and type it again."); return null; }
+  let type = "sugar";
+  if (S.setup.insulin.on) type = await ask("Is "+num+" a sugar reading or insulin units?", [{label:"Sugar reading", value:"sugar", primary:true}, {label:"Insulin units", value:"insulin"}]);
+  return type === "sugar" ? logSugar(num) : logInsulin(num);
+}
+async function getSugarValue(v, prompt, choices){
+  for (;;){
+    if (v == null) v = await askNum(prompt || "Type the sugar reading.", 20, 600, "Type the sugar reading (between 20 and 600).", choices);
+    if (v === "__nocheck") return null;
+    if (v < 20){ addMsg("bot","That's too low to be a sugar reading. Please check the meter."); v = null; continue; }
+    v = Math.round(v);
+    const ex = isExtreme(v);
+    if (!ex) return {v, ex:null};
+    const ok = await ask(v+" is "+(ex==="low" ? "quite low" : "quite high")+". Is this the correct reading, or a typing mistake?", [{label:"Yes, it's "+v, value:true, primary:true}, {label:"No, re-type", value:false}], {tone:"alert"});
+    if (ok) return {v, ex};
+    v = null;
+  }
+}
+function sugarWarning(value, label, extreme){
+  const L = S.setup.limits;
+  const st = statusOf(value, label);
+  const max = isAfterKind(label) ? L.after : L.fasting;
+  if (extreme==="low" || st==="low") return {tone:"alert", text:"\n\n⚠ "+value+" is low (below "+L.low+"). Please follow the low-sugar plan the doctor gave, and consult the doctor, especially if she feels shaky, sweaty, dizzy or confused."};
+  if (extreme==="high") return {tone:"alert", text:"\n\n⚠ "+value+" is quite high (above "+L.veryHigh+"). Please consult the doctor."};
+  if (st==="high") return {tone:"alert", text:"\n\n"+value+" is above the limit of "+max+". It's marked in red in the diary."};
+  if (st==="ok") return {tone:"ok", text:""};
+  return {tone:"", text:""};
+}
+async function logSugar(num){
+  const val = await getSugarValue(num);
+  let date = today();
+  let check;
+  for (;;){
+    const h = date===today() ? new Date().getHours() : 12;
+    const list = checks().map(c => ({c, done: !!sugarFor(date, c), gap: hourGap(c.hour, h)}));
+    const best = date===today() ? list.filter(x=>!x.done).sort((a,b)=>a.gap-b.gap)[0] : null;
+    const sug = best && best.gap <= 2 ? best.c.id : null;
+    const choices = list.map(x => ({label: x.c.label+(x.done?" ✓":""), say:x.c.label, value:x.c.id, primary: x.c.id===sug}));
+    choices.push({label:"Random check", value:"random", primary: !sug});
+    choices.push({label: date===today() ? "It was another day" : "Change day", value:"__day"});
+    const pick = await ask("Sugar "+val.v+(date===today()?"":" on "+prettyDate(date))+". Which check is this?", choices);
+    if (pick === "__day"){ date = await askDate(); continue; }
+    check = pick === "random" ? null : checks().find(c => c.id===pick);
+    break;
+  }
+  if (check){
+    const old = sugarFor(date, check);
+    if (old){
+      const r = await ask(check.label+" already has "+old.value+" at "+timeLabel(old.time)+". Replace it with "+val.v+"?", [{label:"Replace", value:"replace", primary:true}, {label:"Save as random check", value:"random"}]);
+      if (r === "replace") removeWhere(e => e.id===old.id); else check = null;
+    }
+  }
+  const meal = check ? mealOfCheck(check.label) : null;
+  if (meal){
+    const d2 = await mealSet(date, meal, {v:val.v, ex:val.ex, check});
+    return {date:d2, hour: check.hour};
+  }
+  const label = check ? check.label : "Random check";
+  const ctx = {date};
+  const t = await askTime(check ? "What time was the "+label.toLowerCase()+" sugar check?" : "What time was this random sugar check?", check ? [{hm:pad(check.hour)+":00"}] : [], {ctx});
+  date = ctx.date;
+  removeWhere(e => check && e.kind==="missed" && e.date===date && e.itemId===check.id);
+  commit({kind:"sugar", date, time:t, checkId: check ? check.id : null, label, value:val.v, meal:null});
+  const w = sugarWarning(val.v, label, val.ex);
+  addMsg("bot","Saved: "+label+" – "+val.v+" mg/dL at "+timeLabel(t)+(date===today()?"":", "+prettyDate(date))+"."+w.text, w.tone);
+  return {date, hour: check ? check.hour : hourOf(t)};
+}
+
+function timingOf(meal, mealTime, checkTime){
+  if (!mealTime) return {name:meal, time:null, gap:null, kind:"unknown", note:cap(meal)+" time not known"};
+  const gap = minOf(checkTime) - minOf(mealTime);
+  const target = S.setup.postMealHours*60;
+  let kind = "ontime", note = "On time: "+durText(gap)+" after "+meal;
+  if (gap < target - 10){ kind = "early"; note = "Checked early: "+durText(gap)+" after "+meal+" (should be "+durText(target)+")"; }
+  else if (gap > target + 10){ kind = "late"; note = "Checked late: "+durText(gap)+" after "+meal+" (should be "+durText(target)+")"; }
+  return {name:meal, time:mealTime, gap, target, kind, note};
+}
+
+// The meal set: insulin before the meal -> meal time -> sugar after the meal, each with a time.
+async function mealSet(date, meal, sugar, preset){
+  const ctx = {date};
+  const lines = [];
+  let tone = "", warn = "";
+  // 1. insulin before the meal
+  for (const d of dosesForMeal(meal)){
+    const existing = shotFor(ctx.date, d);
+    const isPreset = preset && preset.dose.id === d.id;
+    if (existing && !isPreset){ lines.push("Insulin before "+meal+" already recorded: "+existing.units+"u at "+timeLabel(existing.time)); continue; }
+    if (!isPreset && (missedFor(ctx.date, d.id) || skipped.has(ctx.date+"|"+d.id))) continue;
+    let units;
+    if (isPreset) units = preset.units;
+    else {
+      const a = await ask("Step 1 of 3 – insulin before "+meal+" ("+(d.drug ? d.drug+", " : "")+"prescribed "+d.units+" units). Did she take it?", [
+        {label:"Yes, "+d.units+" units", value:d.units, primary:true},
+        {label:"Different amount", value:"diff"},
+        {label:"Not taken", value:"miss"},
+        {label:"Don't remember", value:"skip"}
+      ]);
+      if (a === "diff") units = await askNum("How many units did she take?", 0.5, 150, "Type the units, between 1 and 150.");
+      else if (a === "miss"){ markMissed(ctx.date, "dose", d); lines.push("Insulin before "+meal+": marked as not taken"); continue; }
+      else if (a === "skip"){ skipped.add(ctx.date+"|"+d.id); continue; }
+      else units = a;
+    }
+    const t = await askTime((isPreset ? "" : "Step 1 of 3 – ")+"What time did she take the insulin before "+meal+"?", windowOptions(meal), {ctx});
+    removeWhere(e => e.date===ctx.date && ((e.kind==="insulin" && e.doseId===d.id) || (e.kind==="missed" && e.itemId===d.id)));
+    commit({kind:"insulin", date:ctx.date, time:t, doseId:d.id, label:d.label, drug:d.drug||"", units, prescribed:d.units});
+    lines.push("Insulin before "+meal+": "+units+"u at "+timeLabel(t)+(units!==d.units ? " (prescribed "+d.units+"u)" : ""));
+  }
+  // 2. meal time
+  let mealTime = null;
+  const me = mealEntry(ctx.date, meal);
+  if (me){ mealTime = me.time; lines.push(cap(meal)+" time already recorded: "+timeLabel(me.time)); }
+  else {
+    const t = await askTime("Step 2 of 3 – what time did she have "+meal+"?", windowOptions(meal), {ctx, allowNull:true, nullLabel: sugar ? "Not sure" : "Not eaten yet", noNow: !!sugar});
+    if (t){ commit({kind:"meal", date:ctx.date, time:t, meal}); mealTime = t; lines.push(cap(meal)+" at "+timeLabel(t)); }
+  }
+  // 3. sugar after the meal
+  const check = checkForMeal(meal);
+  if (sugar){
+    const t = await askTime("Step 3 of 3 – what time was the sugar checked after "+meal+"?", afterOptions(meal, mealTime, check), {ctx, notBefore: mealTime});
+    const timing = timingOf(meal, mealTime, t);
+    removeWhere(e => e.kind==="missed" && e.date===ctx.date && e.itemId===sugar.check.id);
+    commit({kind:"sugar", date:ctx.date, time:t, checkId:sugar.check.id, label:sugar.check.label, value:sugar.v, meal:timing, filled: !!sugar.filled});
+    lines.push("Sugar after "+meal+": "+sugar.v+" mg/dL at "+timeLabel(t));
+    if (timing.time) lines.push(timing.note);
+    const w = sugarWarning(sugar.v, sugar.check.label, sugar.ex);
+    tone = w.tone; warn = w.text;
+  } else if (check && !sugarFor(ctx.date, check) && ctx.date === today()){
+    lines.push("When she checks sugar after "+meal+(mealTime ? " (due around "+timeLabel(hmOf(minOf(mealTime)+S.setup.postMealHours*60))+")" : "")+", type the reading");
+  }
+  if (lines.length) addMsg("bot", "Saved"+(ctx.date===today()?"":" for "+prettyDate(ctx.date))+":\n• "+lines.join("\n• ")+warn, tone);
+  return ctx.date;
+}
+
+async function pickDose(date, units){
+  const h = new Date().getHours();
+  const list = doses().map(d => ({d, done:!!shotFor(date, d), gap:hourGap(d.hour,h)}));
+  const best = date===today() ? list.filter(x=>!x.done).sort((a,b)=>a.gap-b.gap)[0] : null;
+  const choices = list.map(x => ({label: doseText(x.d)+" · "+x.d.units+"u"+(x.done?" ✓":""), say: doseText(x.d), value:x.d.id, primary: best && x.d.id===best.d.id}));
+  choices.push({label:"Extra dose", value:"extra"});
+  choices.push({label: date===today() ? "It was another day" : "Change day", value:"__day"});
+  return ask(units!=null ? "Which insulin was "+units+" units"+(date===today()?"":" on "+prettyDate(date))+"?" : "Which insulin did she take"+(date===today()?"":" on "+prettyDate(date))+"?", choices);
+}
+async function logInsulin(units, date, dose){
+  if (units != null && !(units >= 0.5 && units <= 150)){ addMsg("bot","That's too many units for one dose. Please check and type it again."); return null; }
+  date = date || today();
+  while (!dose){
+    const pick = await pickDose(date, units);
+    if (pick === "__day"){ date = await askDate(); continue; }
+    dose = pick === "extra" ? {id:"extra", label:"Extra dose", drug:"", units:null, hour:new Date().getHours()} : doses().find(d => d.id===pick);
+  }
+  if (units == null){
+    if (dose.id === "extra") units = await askNum("How many units was the extra dose?", 0.5, 150, "Type the units, between 1 and 150.");
+    else {
+      const a = await ask("How many units? The prescription says "+dose.units+".", [{label:dose.units+" units", value:dose.units, primary:true}, {label:"Different amount", value:"diff"}]);
+      units = a === "diff" ? await askNum("Type the number of units.", 0.5, 150, "Type the units, between 1 and 150.") : a;
+    }
+  }
+  if (dose.id !== "extra" && shotFor(date, dose)){
+    const old = shotFor(date, dose);
+    const r = await ask(doseText(dose)+" is already recorded"+(date===today()?" today":" for "+prettyDate(date))+" ("+old.units+"u at "+timeLabel(old.time)+"). Replace it with "+units+"?", [{label:"Replace", value:"replace", primary:true}, {label:"Save as extra dose", value:"extra"}]);
+    if (r === "extra") dose = {id:"extra", label:"Extra dose", drug:dose.drug, units:null, hour:dose.hour};
+  }
+  const meal = dose.id !== "extra" ? mealOfDose(dose) : null;
+  if (meal){
+    const d2 = await mealSet(date, meal, null, {dose, units});
+    return {date:d2, hour: dose.hour};
+  }
+  const origDate = date;
+  const ctx = {date};
+  const t = await askTime("What time did she take the "+doseText(dose)+" insulin?", dose.id!=="extra" ? [{hm:pad(dose.hour)+":00", primary:true}] : [], {ctx});
+  date = ctx.date;
+  if (dose.id !== "extra" && date !== origDate){ const old = shotFor(date, dose); if (old && !confirm(doseText(dose)+" is already recorded for "+prettyDate(date)+" ("+old.units+"u). Replace it?")) { addMsg("bot","Kept the earlier entry. Nothing changed."); return null; } }
+  if (dose.id !== "extra") removeWhere(e => e.date===date && ((e.kind==="insulin" && e.doseId===dose.id) || (e.kind==="missed" && e.itemId===dose.id)));
+  commit({kind:"insulin", date, time:t, doseId:dose.id, label:dose.label, drug:dose.drug||"", units, prescribed:dose.units});
+  addMsg("bot","Saved: insulin "+doseText(dose)+" – "+units+" units at "+timeLabel(t)+(date===today()?"":", "+prettyDate(date))+"."+(dose.units!=null && units!==dose.units ? "\nDifferent from the prescribed "+dose.units+" units; noted in the diary." : ""), "ins");
+  return {date, hour: dose.id==="extra" ? hourOf(t) : dose.hour};
+}
+async function insulinButton(){
+  if (!S.setup.insulin.on){ addMsg("bot","Insulin tracking is off. Turn it on in Diary → Settings → Insulin doses."); return null; }
+  return logInsulin(null);
+}
+
+/* ================= catching up on missing items ================= */
+const skipped = new Set();
+function isOpenItem(date, id, hour, isDose){
+  const st = S.setup;
+  if (date < st.startedOn || (date === st.startedOn && hour < st.startedHour)) return false;
+  if (missedFor(date, id) || skipped.has(date+"|"+id)) return false;
+  if (isDose){ const d = doses().find(x=>x.id===id); return !shotFor(date, d); }
+  return !sugarFor(date, checks().find(x=>x.id===id));
+}
+function openGroups(date, beforeHour){
+  const lim = beforeHour == null ? 24 : beforeHour;
+  const groups = [];
+  checks().forEach(c => { if (!mealOfCheck(c.label) && c.hour < lim && isOpenItem(date, c.id, c.hour, false)) groups.push({type:"check", item:c, hour:c.hour}); });
+  MEALS.forEach(meal => {
+    const c = checkForMeal(meal);
+    const ds = dosesForMeal(meal).filter(d => d.hour < lim && isOpenItem(date, d.id, d.hour, true));
+    const cOpen = c && c.hour < lim && isOpenItem(date, c.id, c.hour, false) ? c : null;
+    if (ds.length || cOpen) groups.push({type:"meal", meal, check:cOpen, doses:ds, hour: Math.min(...ds.map(d=>d.hour).concat(cOpen ? [cOpen.hour] : []))});
+  });
+  doses().forEach(d => { if (!mealOfDose(d) && d.hour < lim && isOpenItem(date, d.id, d.hour, true)) groups.push({type:"dose", item:d, hour:d.hour}); });
+  return groups.sort((a,b)=>a.hour-b.hour);
+}
+function groupText(g){
+  if (g.type==="check") return g.item.label+" sugar (usually "+hourLabel(g.hour)+")";
+  if (g.type==="dose") return doseText(g.item)+" insulin (usually "+hourLabel(g.hour)+", "+g.item.units+" units)";
+  const parts = [];
+  if (g.doses.length) parts.push("insulin before "+g.meal);
+  if (g.check) parts.push("sugar after "+g.meal);
+  return cap(g.meal)+": "+parts.join(" and ");
+}
+function markMissed(date, type, item){
+  if (missedFor(date, item.id)) return;
+  commit({kind:"missed", date, time:pad(item.hour)+":00", itemType:type, itemId:item.id, label: type==="check" ? item.label : doseText(item)});
+}
+async function fillGroup(date, g){
+  const a = await ask(dayText(date)+" – not recorded yet: "+groupText(g)+". Do you remember?", [
+    {label:"Yes, enter it", value:"enter", primary:true},
+    {label:"Mark as missed", value:"miss"},
+    {label:"Skip for now", value:"skip"}
+  ]);
+  const ids = g.type==="meal" ? g.doses.map(d=>d.id).concat(g.check ? [g.check.id] : []) : [g.item.id];
+  if (a === "skip"){ ids.forEach(id => skipped.add(date+"|"+id)); return; }
+  if (a === "miss"){
+    if (g.type==="meal"){ g.doses.forEach(d => markMissed(date,"dose",d)); if (g.check) markMissed(date,"check",g.check); }
+    else markMissed(date, g.type, g.item);
+    addMsg("bot","Marked as missed: "+groupText(g)+", "+dayText(date).toLowerCase()+".");
+    return;
+  }
+  if (g.type === "check"){
+    const val = await getSugarValue(null, "Type the "+g.item.label+" reading.");
+    const fctx = {date};
+    const t = await askTime("What time was it checked?", [{hm:pad(g.hour)+":00", primary:true}], {ctx:fctx, noNow: date !== today()});
+    date = fctx.date;
+    removeWhere(e => e.kind==="missed" && e.date===date && e.itemId===g.item.id);
+    commit({kind:"sugar", date, time:t, checkId:g.item.id, label:g.item.label, value:val.v, meal:null, filled:true});
+    const w = sugarWarning(val.v, g.item.label, val.ex);
+    addMsg("bot","Saved: "+g.item.label+" – "+val.v+" mg/dL at "+timeLabel(t)+", "+dayText(date).toLowerCase()+"."+w.text, w.tone);
+  } else if (g.type === "dose"){
+    await logInsulin(null, date, g.item);
+  } else {
+    let sugar = null;
+    if (g.check){
+      const val = await getSugarValue(null, "Type the sugar reading after "+g.meal+".", [{label:"Sugar wasn't checked", value:"__nocheck"}]);
+      if (val) sugar = {v:val.v, ex:val.ex, check:g.check, filled:true};
+      else markMissed(date, "check", g.check);
+    }
+    await mealSet(date, g.meal, sugar, null);
+  }
+}
+async function followUps(ref){
+  if (ref && ref.date === today()){
+    const gs = openGroups(today(), ref.hour);
+    if (gs.length){
+      addMsg("bot","Earlier today, "+gs.length+" item"+(gs.length>1?"s aren't":" isn't")+" recorded yet. Let's complete the diary.");
+      for (const g of gs) await fillGroup(today(), g);
+    }
+  }
+  for (let n=1; n<=7; n++){
+    const date = daysAgo(n);
+    if (date < S.setup.startedOn) break;
+    if (S.snoozeDays[date] === today()) continue;
+    const gs = openGroups(date, null);
+    if (!gs.length) continue;
+    const a = await ask(dayText(date)+": "+gs.length+" item"+(gs.length>1?"s aren't":" isn't")+" recorded ("+gs.map(groupText).join("; ")+"). Do you remember them?", [
+      {label:"Yes, enter them", value:"enter", primary:true},
+      {label:"Mark all as missed", value:"miss"},
+      {label:"Ask me tomorrow", value:"later"}
+    ]);
+    if (a === "later"){
+      for (let k=n; k<=7; k++) S.snoozeDays[daysAgo(k)] = today();
+      save(); addMsg("bot","Okay, I'll ask again tomorrow."); break;
+    }
+    if (a === "miss"){
+      gs.forEach(g => { if (g.type==="meal"){ g.doses.forEach(d=>markMissed(date,"dose",d)); if (g.check) markMissed(date,"check",g.check); } else markMissed(date, g.type, g.item); });
+      addMsg("bot","Marked "+gs.length+" item"+(gs.length>1?"s":"")+" as missed for "+prettyDate(date)+".");
+      continue;
+    }
+    for (const g of gs) await fillGroup(date, g);
+  }
+  if (canSave() && S.entries.length && S.lastBackup !== today() && S.backupAsked !== today()){
+    S.backupAsked = today(); save();
+    const b = await ask("Daily backup: save today's copy of the diary to the phone? It protects the log if the browser data is cleared.", [{label:"Save backup", value:true, primary:true}, {label:"Later", value:false}], {noCancel:true});
+    if (b) await doBackup(); else addMsg("bot","Okay. Type \"backup\" any time.");
+  }
+}
+
+/* ================= misc ================= */
+function undoLast(){
+  if (!S.entries.length){ addMsg("bot","There's nothing to undo yet."); return; }
+  const last = S.entries.reduce((a,b)=> a.at > b.at ? a : b);
+  removeWhere(e => e.id === last.id);
+  addMsg("bot","Removed: "+describe(last)+".");
+  renderDiary();
+}
+function describe(e){
+  const when = " ("+prettyDate(e.date)+", "+timeLabel(e.time)+")";
+  if (e.kind==="missed") return "missed "+e.label+" ("+prettyDate(e.date)+")";
+  if (e.kind==="meal") return cap(e.meal)+" time"+when;
+  if (e.kind==="sugar") return e.label+" sugar "+e.value+" mg/dL"+when+(e.meal && e.meal.time ? " – "+e.meal.note : "");
+  return "insulin "+doseText(e)+" "+e.units+" units"+when;
+}
+function todaySummary(){
+  const d = today();
+  const cols = buildColumns([d]);
+  const lines = cols.map(c => { const cell = cellFor(c, d); const done = cell.lines[0] !== "-"; return (done ? (cell.status==="miss" ? "✗ " : "✓ ") : "○ ")+c.head+": "+(done ? cell.lines.join(", ") : "not yet"); });
+  addMsg("bot","Today:\n"+lines.join("\n"));
+}
+
+/* ================= backup ================= */
+let downloadsApi = null;
+async function doBackup(){
+  if (!canSave()){ addMsg("bot","Saving files isn't available in this view."); return; }
+  const data = JSON.stringify({app:"sugar-diary", version:4, exportedAt:new Date().toISOString(), setup:S.setup, entries:S.entries, profile:S.profile}, null, 1);
+  try {
+    await deliverFile("sugar-diary-backup-"+today()+".json", data);
+    S.lastBackup = today(); save();
+    addMsg("bot","Backup saved to the phone's Downloads. To restore it: Diary → Settings → Backup and restore.");
+  } catch(err){
+    const code = err && err.code;
+    addMsg("bot", code==="declined" ? "Backup cancelled. I'll ask again tomorrow." : code==="rate_limited" ? "A save prompt is already open." : "The backup couldn't be saved here.");
+  }
+  renderDiary();
+}
+$("restoreFile").addEventListener("change", async ev => {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = "";
+  if (!f) return;
+  try {
+    const obj = JSON.parse(await f.text());
+    if (obj.app !== "sugar-diary" || !obj.setup || !Array.isArray(obj.entries)) throw new Error("bad");
+    if (!confirm("Replace everything on this phone with the backup from "+new Date(obj.exportedAt).toLocaleString("en-IN")+" ("+obj.entries.length+" entries)?")) return;
+    stopAsking();
+    S.setup = obj.setup; S.entries = obj.entries; if (obj.profile) S.profile = obj.profile; else if (obj.reportName) S.profile = {name:obj.reportName, dob:"", age:null, gender:""};
+    sortEntries(); migrate(); save();
+    addMsg("bot","Backup restored: "+obj.entries.length+" entries."); renderDiary();
+    setStatus("Backup restored.");
+  } catch(e){ setStatus("That file isn't a Sugar diary backup."); }
+});
+function setStatus(t){ const s = $("setStatus"); if (s) s.textContent = t; }
+
+/* ================= logbook columns (diary, Excel, PDF) ================= */
+function buildColumns(dates){
+  const cols = [];
+  const used = new Set();
+  checks().filter(c => c.label==="Fasting").forEach(c => { cols.push({kind:"sugar", item:c, head:"Fasting sugar", group:"Fasting"}); used.add(c.id); });
+  MEALS.forEach(meal => {
+    const ds = dosesForMeal(meal); const c = checkForMeal(meal);
+    const hasMealData = S.entries.some(e => e.kind==="meal" && e.meal===meal && dates.includes(e.date));
+    if (!ds.length && !c && !hasMealData) return;
+    ds.forEach(d => { cols.push({kind:"ins", item:d, head:"Insulin before "+meal+(d.drug ? " ("+d.drug+")" : ""), group:cap(meal)}); used.add(d.id); });
+    cols.push({kind:"meal", meal, head:cap(meal)+" time", group:cap(meal)});
+    if (c){ cols.push({kind:"sugar", item:c, head:"Sugar after "+meal, group:cap(meal)}); used.add(c.id); }
+  });
+  const rest = [];
+  checks().filter(c => !used.has(c.id)).forEach(c => rest.push({kind:"sugar", item:c, head:c.label+" sugar", group:"Other", hour:c.hour}));
+  doses().filter(d => !used.has(d.id)).forEach(d => rest.push({kind:"ins", item:d, head:"Insulin: "+doseText(d), group:"Other", hour:d.hour}));
+  rest.sort((a,b)=>a.hour-b.hour).forEach(x => cols.push(x));
+  if (sugars().some(e=>!e.checkId && dates.includes(e.date))) cols.push({kind:"random", head:"Random sugar checks", group:"Other"});
+  if (shots().some(e=>e.doseId==="extra" && dates.includes(e.date))) cols.push({kind:"extra", head:"Extra insulin", group:"Other"});
+  return cols;
+}
+function valueText(v, st){ return v + (st==="high" ? " HIGH" : st==="low" ? " LOW" : ""); }
+function timingShort(t){
+  if (!t) return null;
+  if (!t.time) return "meal time not known";
+  if (t.kind==="early") return "EARLY: "+durText(t.gap)+" after "+t.name;
+  if (t.kind==="late") return "LATE: "+durText(t.gap)+" after "+t.name;
+  return durText(t.gap)+" after "+t.name;
+}
+function cellFor(col, date){
+  if (col.kind === "sugar"){
+    const e = sugarFor(date, col.item);
+    if (e){
+      const st = statusOf(e.value, e.label);
+      const lines = [valueText(e.value, st), "at "+timeLabel(e.time)];
+      const t = timingShort(e.meal); if (t) lines.push(t);
+      if (e.filled) lines.push("entered later");
+      return {lines, status: st==="none" ? "" : st, flag: e.meal && (e.meal.kind==="early" || e.meal.kind==="late")};
+    }
+    if (missedFor(date, col.item.id)) return {lines:["Missed"], status:"miss"};
+    return {lines:["-"], status:""};
+  }
+  if (col.kind === "meal"){
+    const e = mealEntry(date, col.meal);
+    return e ? {lines:[timeLabel(e.time)], status:"meal"} : {lines:["-"], status:""};
+  }
+  if (col.kind === "ins"){
+    const e = shotFor(date, col.item);
+    if (e){
+      const lines = [e.units+" units", "at "+timeLabel(e.time)];
+      if (e.prescribed!=null && e.prescribed!==e.units) lines.push("prescribed "+e.prescribed);
+      return {lines, status:"ins"};
+    }
+    if (missedFor(date, col.item.id)) return {lines:["Not taken / missed"], status:"miss"};
+    return {lines:["-"], status:""};
+  }
+  if (col.kind === "random"){
+    const rs = sugars().filter(e=>e.date===date && !e.checkId);
+    if (!rs.length) return {lines:["-"], status:""};
+    const sts = rs.map(e=>statusOf(e.value,e.label));
+    return {lines: rs.map((e,i)=>valueText(e.value, sts[i])+" at "+timeLabel(e.time)), status: sts.includes("low") ? "low" : sts.includes("high") ? "high" : sts.includes("ok") ? "ok" : ""};
+  }
+  const xs = shots().filter(e=>e.date===date && e.doseId==="extra");
+  return xs.length ? {lines: xs.map(e=>e.units+" units at "+timeLabel(e.time)), status:"ins"} : {lines:["-"], status:""};
+}
+function reportDates(){
+  const first = [S.setup.startedOn].concat(S.entries.map(e=>e.date)).sort()[0];
+  const out = []; const [y,m,d] = first.split("-").map(Number);
+  const dt = new Date(y,m-1,d);
+  while (ymd(dt) <= today()){ out.push(ymd(dt)); dt.setDate(dt.getDate()+1); }
+  return out;
+}
+const ENTRY_HEAD = ["Date","Time","Type","Item","Sugar (mg/dL)","Sugar result","Insulin units","Prescribed units","Medicine","Meal time","Minutes after meal","Meal timing","Notes"];
+function entryRows(){
+  const label = {ok:"Within limit", high:"HIGH - above limit", low:"LOW", none:""};
+  return S.entries.map(e => {
+    const d = prettyDate(e.date);
+    if (e.kind==="sugar"){ const st = statusOf(e.value,e.label); return {cells:[d, timeLabel(e.time), "Sugar", e.label, e.value, label[st], "", "", "", e.meal && e.meal.time ? timeLabel(e.meal.time) : "", e.meal && e.meal.gap!=null ? e.meal.gap : "", e.meal ? e.meal.note : "", e.filled ? "Entered later" : ""], status: st}; }
+    if (e.kind==="insulin") return {cells:[d, timeLabel(e.time), "Insulin", doseText(e), "", "", e.units, e.prescribed==null?"":e.prescribed, e.drug||"", "", "", "", (e.filled ? "Entered later. " : "")+(e.prescribed!=null && e.prescribed!==e.units ? "Different from prescription" : "")], status:"ins"};
+    if (e.kind==="meal") return {cells:[d, timeLabel(e.time), "Meal", cap(e.meal), "", "", "", "", "", timeLabel(e.time), "", "", ""], status:"meal"};
+    return {cells:[d, "", "Missed", e.label, "", "", "", "", "", "", "", "", "Marked as missed / not taken"], status:"miss"};
+  });
+}
+function limitsText(){
+  const L = S.setup.limits;
+  return "Limits (mg/dL): fasting/before-meal up to "+L.fasting+", after-meal up to "+L.after+", low below "+L.low+". After-meal sugar due "+durText(S.setup.postMealHours*60)+" after eating. Red = HIGH or LOW.";
+}
+
+/* ================= exports ================= */
+const COLORS = {ok:"E1F2E7", high:"F8DEDE", low:"F8DEDE", ins:"ECE6F6", miss:"E4E7EB", meal:"E3EEF4", head:"2F6F8F", insHead:"6B4FA0", mealHead:"4F6D7A",
+  text:{ok:"2E8552", high:"B53434", low:"B53434", ins:"6B4FA0", miss:"5C6B78", meal:"1D2935"}};
+const libPromises = {};
+function loadLib(name){
+  const lib = LIBS[name];
+  if (lib.ready()) return Promise.resolve();
+  const tryOne = i => new Promise((res, rej) => {
+    if (i >= lib.src.length) return rej(new Error("load failed"));
+    const s = document.createElement("script"); s.src = lib.src[i]; s.async = true;
+    s.onload = () => lib.ready() ? res() : tryOne(i+1).then(res, rej);
+    s.onerror = () => { s.remove(); tryOne(i+1).then(res, rej); };
+    document.head.appendChild(s);
+  });
+  if (!libPromises[name]) libPromises[name] = tryOne(0).catch(e => { delete libPromises[name]; throw e; });
+  return libPromises[name];
+}
+function exportStatus(t){ const s = $("dlStatus"); if (s) s.textContent = t; }
+const MIME = {xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", pdf:"application/pdf", json:"application/json"};
+function toBlob(filename, data){ return data instanceof Blob ? data : new Blob([data], {type: MIME[filename.split(".").pop()] || "application/octet-stream"}); }
+async function deliverFile(filename, data){
+  if (downloadsApi) return downloadsApi.save({filename, data});
+  if (!STANDALONE) throw {code:"unavailable"};
+  const url = URL.createObjectURL(toBlob(filename, data));
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.rel = "noopener";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+}
+function canSave(){ return STANDALONE || !!downloadsApi; }
+function canShareFiles(){
+  try { return STANDALONE && !!navigator.canShare && navigator.canShare({files:[new File(["x"], "t.pdf", {type:"application/pdf"})]}); } catch(e){ return false; }
+}
+async function shareFile(filename, data){
+  const file = new File([toBlob(filename, data)], filename, {type: MIME[filename.split(".").pop()]});
+  try { await navigator.share({files:[file], title:"Sugar log", text:"Blood sugar and insulin log"}); exportStatus("Shared."); }
+  catch(e){ exportStatus(e && e.name==="AbortError" ? "Sharing cancelled." : "Couldn't open sharing. Use Download PDF instead."); }
+}
+let shareNext = false;
+async function saveFile(filename, data){
+  if (shareNext){ shareNext = false; return shareFile(filename, data); }
+  try { await deliverFile(filename, data); exportStatus("Saved "+filename+" to the phone's Downloads."); }
+  catch(err){
+    const c = err && err.code;
+    exportStatus(c==="declined" ? "Download cancelled." : c==="rate_limited" ? "A save prompt is already open." : c==="extension_not_enabled" ? "This file type can't be saved here." : "The file couldn't be saved here.");
+  }
+}
+function hexRgb(h){ return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; }
+function headColor(kind){ return kind==="ins" || kind==="extra" ? COLORS.insHead : kind==="meal" ? COLORS.mealHead : COLORS.head; }
+function titleLines(dates){
+  return [
+    "Blood sugar and insulin log"+(S.profile && S.profile.name ? " - "+S.profile.name : ""),
+    profileText(S.profile) || "Personal details not entered",
+    (S.setup.mode==="pregnancy" ? "Pregnancy (gestational) diabetes" : "Diabetes")+"   |   "+prettyDate(dates[0])+" to "+prettyDate(dates[dates.length-1])+"   |   Printed "+new Date().toLocaleString("en-IN"),
+    limitsText()
+  ];
+}
+async function exportExcel(){
+  exportStatus("Preparing the Excel file…");
+  try { await loadLib("excel"); } catch(e){ exportStatus("Couldn't load the Excel tool. Check the internet connection and try again."); return; }
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = "Sugar diary";
+  const dates = reportDates();
+  const cols = buildColumns(dates);
+  const ncol = cols.length + 1;
+  const ws = wb.addWorksheet("Logbook", {views:[{state:"frozen", xSplit:1, ySplit:7}], pageSetup:{orientation:"landscape", fitToPage:true, fitToWidth:1, fitToHeight:0}});
+  const T = titleLines(dates);
+  ws.addRow([T[0]]).font = {bold:true, size:14};
+  ws.addRow([T[1]]).font = {bold:true, size:11};
+  ws.addRow([T[2]]);
+  ws.addRow([T[3]]);
+  ws.addRow(["Colours: red = HIGH or LOW sugar, green = within limit, purple = insulin taken, blue = meal time, grey = missed. EARLY / LATE = after-meal check not at the right time."]);
+  [1,2,3,4,5].forEach(r => ws.mergeCells(r,1,r,ncol));
+  const white = {bold:true, color:{argb:"FFFFFFFF"}};
+  const border = {top:{style:"thin",color:{argb:"FFD5DEE4"}}, left:{style:"thin",color:{argb:"FFD5DEE4"}}, bottom:{style:"thin",color:{argb:"FFD5DEE4"}}, right:{style:"thin",color:{argb:"FFD5DEE4"}}};
+  // group header row
+  const gr = ws.addRow([""].concat(cols.map(c=>c.group)));
+  let start = 2;
+  for (let i=1; i<=cols.length; i++){
+    if (i===cols.length || cols[i].group !== cols[i-1].group){ if (i+1 > start) ws.mergeCells(gr.number, start, gr.number, i+1); start = i+2; }
+  }
+  gr.eachCell(c => { c.font = white; c.alignment = {horizontal:"center"}; c.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF1D2935"}}; });
+  const hr = ws.addRow(["Date"].concat(cols.map(c=>c.head)));
+  hr.eachCell(c => { c.font = white; c.border = border; c.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF"+(c.col===1 ? COLORS.head : headColor(cols[c.col-2].kind))}}; c.alignment = {wrapText:true, vertical:"middle", horizontal:"center"}; });
+  hr.height = 34;
+  dates.forEach(date => {
+    const cells = cols.map(c => cellFor(c, date));
+    const row = ws.addRow([prettyDate(date)].concat(cells.map(c => c.lines.join("\n"))));
+    let maxLines = 1;
+    row.eachCell({includeEmpty:true}, cell => {
+      cell.border = border;
+      cell.alignment = {wrapText:true, vertical:"middle", horizontal: cell.col===1 ? "left" : "center"};
+      if (cell.col===1){ cell.font = {bold:true}; return; }
+      const c = cells[cell.col-2]; if (!c) return;
+      maxLines = Math.max(maxLines, c.lines.length);
+      if (c.status){ cell.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF"+COLORS[c.status]}}; cell.font = {bold: c.status!=="meal", color:{argb:"FF"+COLORS.text[c.status]}}; }
+    });
+    row.height = 15*maxLines + 4;
+  });
+  ws.getColumn(1).width = 16;
+  for (let i=2; i<=ncol; i++) ws.getColumn(i).width = 19;
+
+  const ws2 = wb.addWorksheet("All entries", {views:[{state:"frozen", ySplit:1}]});
+  const h2 = ws2.addRow(ENTRY_HEAD);
+  h2.eachCell(c => { c.font = white; c.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF"+COLORS.head}}; c.alignment = {wrapText:true, vertical:"middle"}; });
+  entryRows().forEach(r => {
+    const row = ws2.addRow(r.cells);
+    const st = r.status==="none" ? "" : r.status;
+    row.eachCell({includeEmpty:true}, cell => {
+      cell.border = border;
+      if (st) cell.fill = {type:"pattern", pattern:"solid", fgColor:{argb:"FF"+COLORS[st]}};
+      if ((st==="high" || st==="low") && (cell.col===5 || cell.col===6)) cell.font = {bold:true, color:{argb:"FF"+COLORS.text[st]}};
+      if (cell.col===12 && /early|late/i.test(String(cell.value||""))) cell.font = {bold:true, color:{argb:"FFB06A0A"}};
+    });
+  });
+  [15,10,9,24,10,18,10,11,12,10,10,40,26].forEach((w,i) => ws2.getColumn(i+1).width = w);
+  const buf = await wb.xlsx.writeBuffer();
+  await saveFile("sugar-log-"+today()+".xlsx", buf);
+}
+async function exportPdf(){
+  exportStatus("Preparing the PDF…");
+  try { await loadLib("jspdf"); await loadLib("autotable"); } catch(e){ exportStatus("Couldn't load the PDF tool. Check the internet connection and try again."); return; }
+  const doc = new window.jspdf.jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
+  const clean = s => String(s).replace(/[–—]/g,"-").replace(/[^\x20-\x7E\n]/g,"");
+  const dates = reportDates();
+  const cols = buildColumns(dates);
+  const T = titleLines(dates);
+  doc.setFontSize(16); doc.setTextColor(29,41,53); doc.text(clean(T[0]), 30, 36);
+  doc.setFontSize(10); doc.setTextColor(29,41,53); doc.text(clean(T[1]), 30, 52);
+  doc.setFontSize(8.5); doc.setTextColor(92,107,120);
+  doc.text(clean(T[2]), 30, 65); doc.text(clean(T[3]), 30, 77);
+  let x = 30; const y = 91;
+  [["high","HIGH / LOW sugar"],["ok","Within limit"],["ins","Insulin taken"],["meal","Meal time"],["miss","Missed"]].forEach(([k,l]) => {
+    doc.setFillColor(...hexRgb(COLORS[k])); doc.rect(x, y-7, 9, 9, "F");
+    doc.setTextColor(92,107,120); doc.text(l, x+13, y); x += doc.getTextWidth(l) + 28;
+  });
+  doc.text("EARLY / LATE = after-meal check not at the right time", x, y);
+  // group header row
+  const groupRow = [{content:"", styles:{fillColor:hexRgb("1D2935")}}];
+  for (let i=0; i<cols.length;){
+    let j = i; while (j < cols.length && cols[j].group === cols[i].group) j++;
+    groupRow.push({content:cols[i].group, colSpan:j-i, styles:{fillColor:hexRgb("1D2935"), textColor:255, halign:"center"}});
+    i = j;
+  }
+  const matrix = dates.map(d => cols.map(c => cellFor(c, d)));
+  doc.autoTable({
+    startY: 102,
+    head: [groupRow, ["Date"].concat(cols.map(c=>clean(c.head)))],
+    body: dates.map((d,ri) => [prettyDate(d)].concat(matrix[ri].map(c => clean(c.lines.join("\n"))))),
+    styles: {fontSize: cols.length > 11 ? 6.5 : 7.5, cellPadding:2.5, halign:"center", valign:"middle", lineColor:[213,222,228], lineWidth:0.5, textColor:[29,41,53], overflow:"linebreak"},
+    headStyles: {fillColor:hexRgb(COLORS.head), textColor:255, fontStyle:"bold"},
+    columnStyles: {0:{halign:"left", fontStyle:"bold", cellWidth:58}},
+    margin: {left:30, right:30},
+    didParseCell: data => {
+      if (data.section==="head" && data.row.index===1 && data.column.index>0) data.cell.styles.fillColor = hexRgb(headColor(cols[data.column.index-1].kind));
+      if (data.section!=="body" || data.column.index===0) return;
+      const c = matrix[data.row.index][data.column.index-1];
+      if (c && c.status){ data.cell.styles.fillColor = hexRgb(COLORS[c.status]); data.cell.styles.textColor = hexRgb(COLORS.text[c.status]); if (c.status!=="meal") data.cell.styles.fontStyle = "bold"; }
+    }
+  });
+  doc.addPage();
+  doc.setFontSize(13); doc.setTextColor(29,41,53); doc.text(clean("All entries (with times)"+(S.profile && S.profile.name ? " - "+S.profile.name : "")), 30, 36);
+  const rows = entryRows();
+  doc.autoTable({
+    startY: 46,
+    head: [ENTRY_HEAD],
+    body: rows.map(r => r.cells.map(v => clean(v))),
+    styles: {fontSize:7, cellPadding:2.5, lineColor:[213,222,228], lineWidth:0.5, textColor:[29,41,53]},
+    headStyles: {fillColor:hexRgb(COLORS.head), textColor:255},
+    columnStyles: {11:{cellWidth:140}, 12:{cellWidth:90}},
+    margin: {left:30, right:30},
+    didParseCell: data => {
+      if (data.section!=="body") return;
+      const st = rows[data.row.index].status;
+      if (st && st!=="none") data.cell.styles.fillColor = hexRgb(COLORS[st]);
+      if ((st==="high" || st==="low") && (data.column.index===4 || data.column.index===5)){ data.cell.styles.textColor = hexRgb(COLORS.text[st]); data.cell.styles.fontStyle = "bold"; }
+      if (data.column.index===11 && /early|late/i.test(String(data.cell.raw||""))){ data.cell.styles.textColor = hexRgb("B06A0A"); data.cell.styles.fontStyle = "bold"; }
+    }
+  });
+  const pages = doc.getNumberOfPages();
+  for (let i=1; i<=pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150); doc.text("Page "+i+" of "+pages, doc.internal.pageSize.getWidth()-80, doc.internal.pageSize.getHeight()-16); }
+  await saveFile("sugar-log-"+today()+".pdf", doc.output("arraybuffer"));
+}
+
+/* ================= diary ================= */
+function lastNDays(n){ const out = []; for (let i=0;i<n;i++) out.push(daysAgo(i)); return out; }
+function renderDiary(){
+  const root = $("diary"); root.textContent = "";
+  if (!S.setup){
+    const s = el("div",{class:"section"}); s.appendChild(el("h2",null,"Nothing here yet"));
+    s.appendChild(el("p",{class:"note"},"Finish the quick setup in Chat first.")); root.appendChild(s); return;
+  }
+  if (!storageOk) root.appendChild(el("p",{class:"err"},"This browser isn't letting the app save. Entries will be lost when the page closes."));
+  const d0 = today();
+
+  const rp = el("div",{class:"section"});
+  rp.appendChild(el("h2",null,"Report for the doctor"));
+  rp.appendChild(el("p",{class:"note"},"Full log since "+prettyDate(reportDates()[0])+" in colour, with all times: a day-by-day logbook plus every entry."));
+  rp.appendChild(el("p",null, profileText(S.profile) || "Personal details not entered yet – add them in Settings → Personal details."));
+  const rb = el("div",{class:"btnrow"});
+  const bx = el("button",{type:"button",class:"btn primary",hidden:!canSave()},"Download Excel");
+  const bp = el("button",{type:"button",class:"btn primary",hidden:!canSave()},"Download PDF");
+  bx.addEventListener("click", exportExcel); bp.addEventListener("click", exportPdf);
+  rb.appendChild(bx); rb.appendChild(bp);
+  if (canShareFiles()){
+    const bs = el("button",{type:"button",class:"btn"},"Share PDF (WhatsApp, email…)");
+    bs.addEventListener("click", ()=>{ shareNext = true; exportPdf(); });
+    rb.appendChild(bs);
+  }
+  rp.appendChild(rb);
+  rp.appendChild(el("p",{class:"status",id:"dlStatus"}, canSave() ? "" : "Downloads aren't available in this view."));
+  root.appendChild(rp);
+
+  if (S.entries.length && S.lastBackup !== d0){
+    const b = el("div",{class:"section"});
+    b.appendChild(el("h2",null,"Today's backup isn't saved yet"));
+    b.appendChild(el("p",{class:"note"}, S.lastBackup ? "Last backup: "+prettyDate(S.lastBackup)+"." : "No backup saved yet."));
+    const br = el("div",{class:"btnrow"}); const bb = el("button",{type:"button",class:"btn",hidden:!canSave()},"Save backup now");
+    bb.addEventListener("click", doBackup); br.appendChild(bb); b.appendChild(br);
+    root.appendChild(b);
+  }
+
+  // today
+  const t = el("div",{class:"section"});
+  t.appendChild(el("h2",null,"Today, "+prettyDate(d0)));
+  const g = el("div",{class:"today"});
+  buildColumns([d0]).forEach(c => {
+    const cell = cellFor(c, d0);
+    const card = el("div",{class:"slotcard"+(cell.status?" s-"+cell.status:"")});
+    card.appendChild(el("div",{class:"n"}, (c.kind==="ins"||c.kind==="extra" ? "💉 " : c.kind==="meal" ? "🍽 " : "🩸 ")+c.head));
+    card.appendChild(el("div",{class:"v"}, cell.lines[0]==="-" ? "–" : cell.lines[0]));
+    card.appendChild(el("div",{class:"u"}, cell.lines.slice(1).join(" · ") || (c.item ? "usually "+hourLabel(c.item.hour) : "")));
+    g.appendChild(card);
+  });
+  t.appendChild(g); root.appendChild(t);
+
+  // 7-day stats
+  const days7 = lastNDays(7);
+  const s7 = sugars().filter(e=>days7.includes(e.date));
+  const st = el("div",{class:"section"});
+  st.appendChild(el("h2",null,"Last 7 days"));
+  const sg = el("div",{class:"stats"});
+  const cnt = k => s7.filter(e=>statusOf(e.value,e.label)===k).length;
+  [
+    [s7.filter(e=>e.checkId).length, "planned sugar checks done"],
+    [S.entries.filter(e=>e.kind==="missed" && days7.includes(e.date)).length, "missed or not taken"],
+    [s7.filter(e=>!e.checkId).length, "random checks"],
+    [cnt("ok"), "within limit"],
+    [cnt("high"), "HIGH readings"],
+    [cnt("low"), "LOW readings"],
+    [s7.filter(e=>e.meal && (e.meal.kind==="early" || e.meal.kind==="late")).length, "after-meal checks early or late"]
+  ].forEach(([b,s]) => { const d = el("div",{class:"stat"}); d.appendChild(el("b",null,String(b))); d.appendChild(el("span",null,s)); sg.appendChild(d); });
+  st.appendChild(sg);
+  const avg = checks().map(c => { const v = s7.filter(e=>e.checkId===c.id).map(e=>e.value); return v.length ? c.label+": avg "+Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null; }).filter(Boolean);
+  if (avg.length) st.appendChild(el("p",{class:"note"}, avg.join("   |   ")));
+  root.appendChild(st);
+
+  const ch = el("div",{class:"section"});
+  ch.appendChild(el("h2",null,"Sugar over 14 days"));
+  ch.appendChild(buildChart());
+  root.appendChild(ch);
+
+  // logbook
+  const lb = el("div",{class:"section"});
+  lb.appendChild(el("h2",null,"Logbook, last 14 days"));
+  const days14 = lastNDays(14);
+  const cols = buildColumns(days14);
+  const wrap = el("div",{class:"scroll"}); const tbl = el("table");
+  const hr = el("tr"); hr.appendChild(el("th",{class:"d"},"Date"));
+  cols.forEach(c => hr.appendChild(el("th",{class: c.kind==="ins"||c.kind==="extra" ? "insh" : c.kind==="meal" ? "mealh" : ""}, c.head)));
+  const thead = el("thead"); thead.appendChild(hr); tbl.appendChild(thead);
+  const tb = el("tbody");
+  days14.forEach(date => {
+    const tr = el("tr"); tr.appendChild(el("td",{class:"d"}, prettyDate(date)));
+    cols.forEach(c => {
+      const cell = cellFor(c, date);
+      const td = el("td",{class:"c"+(cell.status?" s-"+cell.status:"")});
+      cell.lines.forEach((l,i) => {
+        const n = el(i===0 ? "b" : "small", null, l);
+        if (/^(EARLY|LATE)/.test(l)){ n.style.color = "var(--high)"; n.style.fontWeight = "700"; }
+        td.appendChild(n);
+      });
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb); wrap.appendChild(tbl); lb.appendChild(wrap);
+  const lg = el("div",{class:"legend"});
+  [["var(--low-bg)","HIGH or LOW"],["var(--ok-bg)","Within limit"],["var(--ins-bg)","Insulin taken"],["var(--meal-bg)","Meal time"],["var(--miss-bg)","Missed"]].forEach(([c,l])=>{ const s = el("span"); const i = el("i"); i.style.background = c; s.appendChild(i); s.appendChild(document.createTextNode(l)); lg.appendChild(s); });
+  lb.appendChild(lg);
+  lb.appendChild(el("p",{class:"note"}, limitsText()+" Scroll sideways for all columns."));
+  root.appendChild(lb);
+
+  const re = el("div",{class:"section"});
+  re.appendChild(el("h2",null,"Recent entries"));
+  const ul = el("ul",{class:"entries"});
+  const recent = [...S.entries].sort((a,b)=> b.at.localeCompare(a.at)).slice(0,15);
+  if (!recent.length) ul.appendChild(el("li",null,"No entries yet. Go to Chat and type a number."));
+  recent.forEach(e => {
+    const li = el("li"); li.appendChild(el("span",null,({sugar:"🩸 ",insulin:"💉 ",meal:"🍽 ",missed:"✗ "})[e.kind]+describe(e)));
+    const b = el("button",{type:"button"},"Delete");
+    b.addEventListener("click", ()=>{ if (!confirm("Delete "+describe(e)+"?")) return; removeWhere(x=>x.id===e.id); renderDiary(); });
+    li.appendChild(b); ul.appendChild(li);
+  });
+  re.appendChild(ul); root.appendChild(re);
+
+  root.appendChild(buildSettings());
+}
+function buildChart(){
+  const days = lastNDays(14).reverse();
+  const W = 600, H = 220, P = {l:34, r:10, t:10, b:26};
+  const pts = sugars().filter(e=>days.includes(e.date)).map(e => ({x: days.indexOf(e.date) + minOf(e.time)/1440, y:e.value, st:statusOf(e.value,e.label)})).sort((a,b)=>a.x-b.x);
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 "+W+" "+H); svg.setAttribute("width","100%"); svg.setAttribute("role","img");
+  svg.setAttribute("aria-label","Sugar readings for the last 14 days");
+  const L = S.setup.limits;
+  const vals = pts.map(p=>p.y).concat([L.fasting, L.after, L.low]);
+  const lo = Math.min(...vals) - 15, hi = Math.max(...vals) + 15;
+  const X = x => P.l + x/14*(W-P.l-P.r);
+  const Y = y => P.t + (1-(y-lo)/(hi-lo))*(H-P.t-P.b);
+  const mk = (tag, a) => { const n = document.createElementNS(ns,tag); for (const k in a) n.setAttribute(k,a[k]); svg.appendChild(n); return n; };
+  const step = (hi-lo) > 200 ? 50 : 25;
+  for (let v = Math.ceil(lo/step)*step; v <= hi; v += step){
+    mk("line",{x1:P.l,x2:W-P.r,y1:Y(v),y2:Y(v),stroke:"var(--line)","stroke-width":1});
+    mk("text",{x:P.l-6,y:Y(v)+3,"text-anchor":"end"}).textContent = v;
+  }
+  [[L.fasting,"var(--brand)","6 4"],[L.after,"var(--brand)","2 3"],[L.low,"var(--low)","6 4"]].forEach(([v,c,dash]) => mk("line",{x1:P.l,x2:W-P.r,y1:Y(v),y2:Y(v),stroke:c,"stroke-width":1.2,"stroke-dasharray":dash}));
+  days.forEach((d,i)=>{ if (i%2===0){ const [,m,dd] = d.split("-"); mk("text",{x:X(i+0.5),y:H-8,"text-anchor":"middle"}).textContent = Number(dd)+"/"+Number(m); }});
+  if (pts.length > 1) mk("polyline",{points:pts.map(p=>X(p.x)+","+Y(p.y)).join(" "),fill:"none",stroke:"var(--brand)","stroke-width":1.5,"stroke-opacity":.4});
+  const color = {ok:"var(--ok)",high:"var(--low)",low:"var(--low)",none:"var(--brand)"};
+  pts.forEach(p => mk("circle",{cx:X(p.x),cy:Y(p.y),r:4.5,fill:color[p.st]}));
+  if (!pts.length) mk("text",{x:W/2,y:H/2,"text-anchor":"middle"}).textContent = "Readings will appear here once recorded";
+  const box = el("div"); box.appendChild(svg);
+  box.appendChild(el("p",{class:"note"},"Red dots = HIGH or LOW. Dashed blue: fasting limit "+L.fasting+". Dotted blue: after-meal limit "+L.after+". Dashed red: low line "+L.low+"."));
+  return box;
+}
+function buildSettings(){
+  const s = el("div",{class:"section"});
+  s.appendChild(el("h2",null,"Settings"));
+  const mkDet = (title, node) => { const d = el("details",{class:"set"}); d.appendChild(el("summary",null,title)); d.appendChild(node); s.appendChild(d); };
+  mkDet("Personal details", profileEditor(S.profile, p => { S.profile = p; save(); renderDiary(); setStatus("Personal details saved."); }));
+  mkDet("Check times", checksEditor(S.setup.checks, out => { S.setup.checks = out; save(); renderDiary(); setStatus("Check times saved."); }));
+  mkDet("After-meal timing", mealHoursEditor());
+  const insWrap = el("div");
+  const lab = el("label",{class:"note"}); const cb = el("input",{type:"checkbox"}); cb.checked = S.setup.insulin.on;
+  cb.addEventListener("change", ()=>{ S.setup.insulin.on = cb.checked; save(); renderDiary(); idleChips(); setStatus(cb.checked ? "Insulin tracking on." : "Insulin tracking off."); });
+  lab.appendChild(cb); lab.appendChild(document.createTextNode(" Track insulin")); insWrap.appendChild(lab);
+  const startRows = S.setup.insulin.doses.length ? S.setup.insulin.doses : [{id:uid(), label:"Before breakfast", hour:8, drug:"", units:null}];
+  insWrap.appendChild(dosesEditor(startRows, out => { S.setup.insulin.doses = out; S.setup.insulin.on = true; save(); renderDiary(); idleChips(); setStatus("Doses saved. Past entries keep the units recorded at the time."); }));
+  mkDet("Insulin doses", insWrap);
+  mkDet("Sugar limits", limitsEditor(S.setup.limits, out => { S.setup.limits = out; save(); renderDiary(); setStatus("Limits saved."); }));
+  const bk = el("div");
+  bk.appendChild(el("p",{class:"note"},"Everything is stored only in this phone's browser. The backup file goes to the phone's Downloads folder."));
+  const br = el("div",{class:"btnrow"});
+  const b1 = el("button",{type:"button",class:"btn primary",hidden:!canSave()},"Save backup now");
+  b1.addEventListener("click", doBackup);
+  const b2 = el("button",{type:"button",class:"btn"},"Restore from backup");
+  b2.addEventListener("click", ()=> $("restoreFile").click());
+  br.appendChild(b1); br.appendChild(b2); bk.appendChild(br);
+  if (S.lastBackup) bk.appendChild(el("p",{class:"note"},"Last backup: "+prettyDate(S.lastBackup)+"."));
+  mkDet("Backup and restore", bk);
+  const dz = el("div");
+  const rs = el("button",{type:"button",class:"btn danger"},"Delete everything and start over");
+  rs.addEventListener("click", ()=>{
+    if (!confirm("This deletes every entry and the setup on this phone. Save a backup first if you need it. Continue?")) return;
+    stopAsking(); S = blank(); save(); renderLog(); renderDiary(); showTab("chat"); setTimeout(startSetup, 0);
+  });
+  const r2 = el("div",{class:"btnrow"}); r2.appendChild(rs); dz.appendChild(r2);
+  mkDet("Start over", dz);
+  s.appendChild(el("p",{class:"status",id:"setStatus"}));
+  return s;
+}
+
+/* ================= tabs & boot ================= */
+function showTab(which){
+  const chat = which === "chat";
+  $("chat").hidden = !chat; $("diary").hidden = chat;
+  $("tabChat").setAttribute("aria-selected", String(chat));
+  $("tabDiary").setAttribute("aria-selected", String(!chat));
+  if (chat) renderLog(); else renderDiary();
+}
+$("tabChat").addEventListener("click", ()=>showTab("chat"));
+$("tabDiary").addEventListener("click", ()=>showTab("diary"));
+$("composer").addEventListener("submit", ev => { ev.preventDefault(); const v = $("input").value; $("input").value = ""; handleText(v); });
+document.addEventListener("visibilitychange", ()=>{ if (!document.hidden && S.setup){ renderDiary(); if (!running) run(async()=>null); } });
+
+migrate();
+renderLog();
+if (!S.setup){ S.chat = []; startSetup(); }
+else { if (!S.chat.length) addMsg("bot","Welcome back. Type a number to record it."); idleChips(); }
+renderDiary();
+
+if (STANDALONE){
+  try {
+    if (!document.querySelector('link[rel="manifest"]')){
+      const m = document.createElement("link"); m.rel = "manifest"; m.href = "manifest.webmanifest"; document.head.appendChild(m);
+      const ic = document.createElement("link"); ic.rel = "apple-touch-icon"; ic.href = "icons/icon-192.png"; document.head.appendChild(ic);
+    }
+    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(()=>{});
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(ok => { S.persistent = ok; }).catch(()=>{});
+  } catch(e){}
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", ev => {
+    ev.preventDefault(); deferred = ev;
+    const h = document.querySelector("header");
+    if (h && !$("installBtn")){
+      const b = el("button",{type:"button",id:"installBtn",class:"btn primary"},"Install app");
+      b.style.padding = "6px 12px";
+      b.addEventListener("click", async ()=>{ if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(()=>{}); deferred = null; b.remove(); });
+      h.insertBefore(b, h.lastElementChild);
+    }
+  });
+}
+let booted = false;
+function bootFollowUps(){ if (booted || !S.setup) return; booted = true; if (!running) run(async()=>null); }
+if (window.claude && typeof window.claude.use === "function"){
+  window.claude.use("downloads").then(api => { downloadsApi = api; renderDiary(); bootFollowUps(); }).catch(()=>bootFollowUps());
+  setTimeout(bootFollowUps, 3000);
+} else bootFollowUps();
+})();
+</script>
+</body>
+</html>
