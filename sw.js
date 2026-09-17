@@ -1,6 +1,6 @@
 // Offline support: keeps a copy of every app file on the phone.
 // When you change any file, raise the version number below so phones pick up the update.
-const CACHE = "sugar-diary-v1";
+const CACHE = "sugar-diary-v3";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png",
