@@ -149,7 +149,7 @@ const KEY = "sugarDiary.v2";
 const CHECK_LABELS = ["Fasting","After breakfast","Before lunch","After lunch","Before dinner","After dinner","Bedtime","Night"];
 const DOSE_LABELS = ["Before breakfast","Before lunch","Before dinner","Night","Morning","Other"];
 const MEALS = ["breakfast","lunch","dinner"];
-const WINDOWS = {breakfast:[8*60, 11*60], lunch:[12*60, 15*60], dinner:[19*60, 22*60]};
+const WINDOWS = {breakfast:[8*60, 11*60+30], lunch:[12*60, 15*60+30], dinner:[19*60, 22*60+30]};
 const PRESETS = {
   pregnancy1:{fasting:95, after:140, low:70, veryHigh:200},
   pregnancy2:{fasting:95, after:120, low:70, veryHigh:200},
@@ -242,7 +242,7 @@ function statusOf(value, label){
 }
 function isExtreme(v){ const L = S.setup.limits; return (L.low!=null && v < L.low) ? "low" : (L.veryHigh!=null && v > L.veryHigh) ? "high" : null; }
 function doseText(d){ return d.label + (d.drug ? " ("+d.drug+")" : ""); }
-function sortEntries(){ S.entries.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time)); }
+function sortEntries(){ S.entries.sort((a,b)=> (a.date+(a.time||"")).localeCompare(b.date+(b.time||""))); }
 function commit(e){ e.id = uid(); e.at = new Date().toISOString(); S.entries.push(e); sortEntries(); save(); renderDiary(); return e; }
 function removeWhere(fn){ S.entries = S.entries.filter(e => !fn(e)); save(); }
 
@@ -276,6 +276,8 @@ function setCard(node){ const a = $("cardArea"); a.textContent = ""; if (node) a
 const CANCEL = {cancel:true};
 let asker = null;
 let running = false;
+let queuedAction = null;
+let silentStop = false;
 let inSetup = false;
 function ask(text, choices, opt){
   opt = opt || {};
@@ -291,16 +293,17 @@ function askNum(text, min, max, err, choices){ return ask(text, choices || [], {
 async function askTime(text, options, o){
   o = o || {};
   const ctx = o.ctx || {date: today()};
-  const early = new Date().getHours() < 6;
   const validate = hm => (o.notBefore && hm < o.notBefore) ? "It should be after "+timeLabel(o.notBefore)+"." : null;
   const future = hm => ctx.date === today() && hm > nowHM();
   const choices = [];
   const seen = new Set();
   if (ctx.date === today() && !o.noNow){ choices.push({label:"Now ("+timeLabel(nowHM())+")", say:timeLabel(nowHM()), value:nowHM()}); seen.add(nowHM()); }
-  (options||[]).forEach(x => { if (!validate(x.hm) && (early || !future(x.hm)) && !seen.has(x.hm)){ seen.add(x.hm); choices.push({label:x.label || timeLabel(x.hm), say:timeLabel(x.hm), value:x.hm, primary:x.primary}); } });
+  (options||[]).forEach(x => { if (!validate(x.hm) && !future(x.hm) && !seen.has(x.hm)){ seen.add(x.hm); choices.push({label:x.label || timeLabel(x.hm), say:timeLabel(x.hm), value:x.hm, primary:x.primary}); } });
   choices.push({label:"Type a time", value:"__type"});
-  if (o.allowNull) choices.push({label:o.nullLabel || "Not sure", value:"__null"});
-  const nullChoice = o.allowNull ? [{label:o.nullLabel || "Not sure", value:"__null"}] : [];
+  const extra = (o.extra || []).map(x => ({label:x.label, value:x.value}));
+  if (o.allowNull) extra.push({label:o.nullLabel || "Not sure", value:"__null"});
+  extra.forEach(x => choices.push(x));
+  const nullChoice = extra;
   let v = await ask(text, choices, {time:{validate}});
   for (;;){
     if (v === "__type"){ v = await ask("Type the time like 8:30 am or 11 pm.", nullChoice, {time:{validate}}); continue; }
@@ -313,6 +316,11 @@ async function askTime(text, options, o){
       continue;
     }
     if (v === "__null") return null;
+    if (typeof v === "string" && v.indexOf("__x:") === 0) return v;
+    if (future(v) && new Date().getHours() >= 5){
+      addMsg("bot", timeLabel(v)+" hasn't come yet today. Please type the correct time. (If it was on another day, tap Stop and choose that day first.)");
+      v = "__type"; continue;
+    }
     if (future(v)){
       const y = daysAgo(1);
       const ok = await ask(timeLabel(v)+" hasn't come yet today. Was it last night ("+prettyDate(y)+")?", [
@@ -334,6 +342,16 @@ function afterOptions(meal, mealTime, check){
   if (!mealTime) return check ? [{hm:pad(check.hour)+":00"}] : [];
   const target = S.setup.postMealHours*60;
   return [60,90,120,150,180].map(off => ({hm:hmOf(minOf(mealTime)+off), label:timeLabel(hmOf(minOf(mealTime)+off))+" ("+durText(off)+" after "+meal+")", primary: off===target}));
+}
+async function askDay(what){
+  const h = new Date().getHours();
+  let v = await ask("Which day is this "+what+" for?", [
+    {label:"Today ("+prettyDate(today())+")", value:today(), primary: h >= 4},
+    {label:"Yesterday ("+prettyDate(daysAgo(1))+")", value:daysAgo(1), primary: h < 4},
+    {label:"Earlier date", value:"__other"}
+  ]);
+  if (v === "__other") v = await askDate();
+  return v;
 }
 async function askDate(){
   const choices = [1,2,3,4,5,6].map(n => ({label: n===1 ? "Yesterday" : prettyDate(daysAgo(n)), value:daysAgo(n)}));
@@ -368,10 +386,11 @@ async function run(fn){
     const ref = await fn();
     await followUps(ref);
   } catch(e){
-    if (e === CANCEL) addMsg("bot","Stopped. Anything already saved is kept.");
+    if (e === CANCEL){ if (!silentStop) addMsg("bot","Stopped. Anything already saved is kept."); }
     else { console.error(e); addMsg("bot","Something went wrong. Please try again."); }
   } finally {
-    running = false; asker = null; renderDiary(); idleChips();
+    running = false; asker = null; silentStop = false; renderDiary(); idleChips();
+    if (queuedAction){ const f = queuedAction; queuedAction = null; setTimeout(() => run(f), 0); }
   }
 }
 function idleChips(){
@@ -626,7 +645,9 @@ function handleText(raw){
     if (/^(today|status)/.test(lower)) return later(todaySummary);
     if (/^undo/.test(lower)) return later(undoLast);
     if (/^backup/.test(lower)) return later(doBackup);
-    if (/^help/.test(lower)){ addMsg("bot","• Type a number to record sugar or insulin\n• \"insulin\" – record a dose\n• \"diary\" – full log and doctor's report\n• \"today\" – what's done today\n• \"undo\" – remove the last entry\n• \"backup\" – save a backup file\n• \"stop\" – stop the current questions"); return; }
+    if (/^help/.test(lower)){ addMsg("bot","• Type a number to record sugar or insulin\n• \"insulin\" – record a dose\n• \"breakfast\", \"lunch\" or \"dinner\" – record a meal time\n• \"diary\" – full log and doctor's report\n• \"today\" – what's done today\n• \"undo\" – remove the last entry\n• \"backup\" – save a backup file\n• \"stop\" – stop the current questions"); return; }
+    const mw = /\b(breakfast|lunch|dinner)\b/.exec(lower);
+    if (!asker && mw) return run(() => logMealWord(mw[1]));
     if (!asker && /(insulin|lantus|dose)/.test(lower)) return run(insulinButton);
   }
   if (asker){
@@ -650,6 +671,12 @@ function handleText(raw){
       if (d < S.setup.startedOn && !confirm("That's before the diary started. Record it anyway?")) return;
       const a = asker; asker = null; return a.resolve(d);
     }
+    const mw2 = /\b(breakfast|lunch|dinner)\b/.exec(lower);
+    if (asker.opt.soft && (isNum || mw2 || /(insulin|lantus|dose)/.test(lower))){
+      queuedAction = isNum ? (() => logNumber(num)) : mw2 ? (() => logMealWord(mw2[1])) : insulinButton;
+      silentStop = true; stopAsking();
+      return;
+    }
     addMsg("bot","Please answer with the buttons below, or type \"stop\".");
     return;
   }
@@ -662,7 +689,86 @@ async function logNumber(num){
   if (!(num > 0 && num <= 600)){ addMsg("bot","That number looks wrong. Please check it and type it again."); return null; }
   let type = "sugar";
   if (S.setup.insulin.on) type = await ask("Is "+num+" a sugar reading or insulin units?", [{label:"Sugar reading", value:"sugar", primary:true}, {label:"Insulin units", value:"insulin"}]);
-  return type === "sugar" ? logSugar(num) : logInsulin(num);
+  if (type === "insulin" && !(num >= 0.5 && num <= 150)){ addMsg("bot","That's too many units for one dose. Please check and type it again."); return null; }
+  const date = await askDay(type === "sugar" ? "sugar reading ("+num+")" : "insulin dose ("+num+" units)");
+  return type === "sugar" ? logSugar(num, date) : logInsulin(num, date);
+}
+function mealByClock(){
+  const m = minOf(nowHM());
+  if (m < 5*60) return null;
+  return m < 11*60+30 ? "breakfast" : m < 17*60 ? "lunch" : "dinner";
+}
+async function listCheck(v, date, note){
+  const h = date===today() ? new Date().getHours() : 12;
+  const list = checks().map(c => ({c, done: !!sugarFor(date, c), gap: hourGap(c.hour, h)}));
+  const best = date===today() ? list.filter(x=>!x.done).sort((a,b)=>a.gap-b.gap)[0] : null;
+  const sug = best && best.gap <= 2 ? best.c.id : null;
+  const choices = list.map(x => ({label: x.c.label+(x.done?" ✓":""), say:x.c.label, value:x.c.id, primary: x.c.id===sug}));
+  choices.push({label:"Random check", value:"random", primary: !sug});
+  const pick = await ask((note ? note+"\n" : "")+"Which check is sugar "+v+"?", choices);
+  return pick === "random" ? null : checks().find(c => c.id===pick);
+}
+async function askMealTime(date, meal, intro){
+  const ctx = {date};
+  const r = await askTime((intro ? intro+" " : "")+"What time did she have "+meal+"?", windowOptions(meal), {ctx,
+    extra:[{label:"Skipped "+meal, value:"__x:skip"}, {label:"Don't remember", value:"__x:unknown"}]});
+  if (r === "__x:unknown"){ skipped.add(ctx.date+"|meal|"+meal); return null; }
+  const skippedMeal = r === "__x:skip";
+  removeWhere(e => e.kind==="meal" && e.date===ctx.date && e.meal===meal);
+  commit({kind:"meal", date:ctx.date, time: skippedMeal ? null : r, meal, skipped: skippedMeal});
+  addMsg("bot", skippedMeal ? "Saved: "+meal+" skipped"+(ctx.date===today()?" today":" on "+prettyDate(ctx.date))+"." : "Saved: "+meal+" at "+timeLabel(r)+(ctx.date===today()?"":", "+prettyDate(ctx.date))+".");
+  return {date:ctx.date, time: skippedMeal ? null : r};
+}
+async function logMealWord(meal){
+  const hour = new Date().getHours();
+  const date = (meal === "dinner" && hour < 4) ? daysAgo(1) : today();
+  const me = mealEntry(date, meal);
+  if (me){
+    addMsg("bot", cap(meal)+" is already recorded for "+(date===today()?"today":prettyDate(date))+": "+(me.time ? timeLabel(me.time) : "skipped")+". (To change it, delete it in Diary → Recent entries.)");
+    return null;
+  }
+  const yes = await ask("Do you want to log "+meal+" time"+(date===today()?"":" for "+prettyDate(date))+"?", [{label:"Yes", value:true, primary:true}, {label:"No", value:false}]);
+  if (!yes){ addMsg("bot","Okay, nothing saved."); return null; }
+  const r = await askMealTime(date, meal, "");
+  if (!r || !r.time) return null;
+  const ds = dosesForMeal(meal).filter(d => !shotFor(r.date, d));
+  if (ds.length) addMsg("bot","If she took the insulin before "+meal+", tap \"Log insulin\" to record it.");
+  return {date:r.date, hour: hourOf(r.time)};
+}
+async function chooseCheck(v, date){
+  const clockMeal = date === today() ? mealByClock() : null;
+  if (!clockMeal) return listCheck(v, date);
+  // Earlier meals first: their times must be filled before asking about the current meal.
+  for (const meal of MEALS.slice(0, MEALS.indexOf(clockMeal))){
+    if (mealEntry(date, meal) || skipped.has(date+"|meal|"+meal)) continue;
+    await askMealTime(date, meal, "First, "+meal+" time isn't recorded today.");
+  }
+  const meal = clockMeal;
+  const after = checkForMeal(meal);
+  const me = mealEntry(date, meal);
+  let ans;
+  if (me && me.time){
+    ans = await ask(cap(meal)+" was at "+timeLabel(me.time)+". Is "+v+" the sugar after "+meal+"?", [
+      {label:"Yes, after "+meal, value:"yes", primary:true},
+      {label:"No, another check", value:"other"}
+    ]);
+  } else if (me && !me.time){
+    return listCheck(v, date, cap(meal)+" was skipped today.");
+  } else {
+    ans = await ask("Has she had "+meal+" yet?", [
+      {label:"Yes, had "+meal, value:"yes", primary: meal!=="breakfast"},
+      {label:"Not yet", value:"no", primary: meal==="breakfast"},
+      {label:"Another check", value:"other"}
+    ]);
+  }
+  if (ans === "other") return listCheck(v, date);
+  if (ans === "yes"){
+    if (after) return after;
+    return listCheck(v, date, "There's no \"After "+meal+"\" check in the setup.");
+  }
+  const pre = meal === "breakfast" ? checks().find(c => c.label==="Fasting") : checks().find(c => c.label==="Before "+meal);
+  if (pre) return pre;
+  return listCheck(v, date, "Okay, before "+meal+".");
 }
 async function getSugarValue(v, prompt, choices){
   for (;;){
@@ -687,23 +793,10 @@ function sugarWarning(value, label, extreme){
   if (st==="ok") return {tone:"ok", text:""};
   return {tone:"", text:""};
 }
-async function logSugar(num){
+async function logSugar(num, date){
+  date = date || today();
   const val = await getSugarValue(num);
-  let date = today();
-  let check;
-  for (;;){
-    const h = date===today() ? new Date().getHours() : 12;
-    const list = checks().map(c => ({c, done: !!sugarFor(date, c), gap: hourGap(c.hour, h)}));
-    const best = date===today() ? list.filter(x=>!x.done).sort((a,b)=>a.gap-b.gap)[0] : null;
-    const sug = best && best.gap <= 2 ? best.c.id : null;
-    const choices = list.map(x => ({label: x.c.label+(x.done?" ✓":""), say:x.c.label, value:x.c.id, primary: x.c.id===sug}));
-    choices.push({label:"Random check", value:"random", primary: !sug});
-    choices.push({label: date===today() ? "It was another day" : "Change day", value:"__day"});
-    const pick = await ask("Sugar "+val.v+(date===today()?"":" on "+prettyDate(date))+". Which check is this?", choices);
-    if (pick === "__day"){ date = await askDate(); continue; }
-    check = pick === "random" ? null : checks().find(c => c.id===pick);
-    break;
-  }
+  let check = await chooseCheck(val.v, date);
   if (check){
     const old = sugarFor(date, check);
     if (old){
@@ -770,7 +863,7 @@ async function mealSet(date, meal, sugar, preset){
   // 2. meal time
   let mealTime = null;
   const me = mealEntry(ctx.date, meal);
-  if (me){ mealTime = me.time; lines.push(cap(meal)+" time already recorded: "+timeLabel(me.time)); }
+  if (me){ mealTime = me.time || null; lines.push(me.time ? cap(meal)+" time already recorded: "+timeLabel(me.time) : cap(meal)+" was recorded as skipped"); }
   else {
     const t = await askTime("Step 2 of 3 – what time did she have "+meal+"?", windowOptions(meal), {ctx, allowNull:true, nullLabel: sugar ? "Not sure" : "Not eaten yet", noNow: !!sugar});
     if (t){ commit({kind:"meal", date:ctx.date, time:t, meal}); mealTime = t; lines.push(cap(meal)+" at "+timeLabel(t)); }
@@ -799,7 +892,6 @@ async function pickDose(date, units){
   const best = date===today() ? list.filter(x=>!x.done).sort((a,b)=>a.gap-b.gap)[0] : null;
   const choices = list.map(x => ({label: doseText(x.d)+" · "+x.d.units+"u"+(x.done?" ✓":""), say: doseText(x.d), value:x.d.id, primary: best && x.d.id===best.d.id}));
   choices.push({label:"Extra dose", value:"extra"});
-  choices.push({label: date===today() ? "It was another day" : "Change day", value:"__day"});
   return ask(units!=null ? "Which insulin was "+units+" units"+(date===today()?"":" on "+prettyDate(date))+"?" : "Which insulin did she take"+(date===today()?"":" on "+prettyDate(date))+"?", choices);
 }
 async function logInsulin(units, date, dose){
@@ -839,7 +931,8 @@ async function logInsulin(units, date, dose){
 }
 async function insulinButton(){
   if (!S.setup.insulin.on){ addMsg("bot","Insulin tracking is off. Turn it on in Diary → Settings → Insulin doses."); return null; }
-  return logInsulin(null);
+  const date = await askDay("insulin dose");
+  return logInsulin(null, date);
 }
 
 /* ================= catching up on missing items ================= */
@@ -881,7 +974,7 @@ async function fillGroup(date, g){
     {label:"Yes, enter it", value:"enter", primary:true},
     {label:"Mark as missed", value:"miss"},
     {label:"Skip for now", value:"skip"}
-  ]);
+  ], {soft:true});
   const ids = g.type==="meal" ? g.doses.map(d=>d.id).concat(g.check ? [g.check.id] : []) : [g.item.id];
   if (a === "skip"){ ids.forEach(id => skipped.add(date+"|"+id)); return; }
   if (a === "miss"){
@@ -929,7 +1022,7 @@ async function followUps(ref){
       {label:"Yes, enter them", value:"enter", primary:true},
       {label:"Mark all as missed", value:"miss"},
       {label:"Ask me tomorrow", value:"later"}
-    ]);
+    ], {soft:true});
     if (a === "later"){
       for (let k=n; k<=7; k++) S.snoozeDays[daysAgo(k)] = today();
       save(); addMsg("bot","Okay, I'll ask again tomorrow."); break;
@@ -943,7 +1036,7 @@ async function followUps(ref){
   }
   if (canSave() && S.entries.length && S.lastBackup !== today() && S.backupAsked !== today()){
     S.backupAsked = today(); save();
-    const b = await ask("Daily backup: save today's copy of the diary to the phone? It protects the log if the browser data is cleared.", [{label:"Save backup", value:true, primary:true}, {label:"Later", value:false}], {noCancel:true});
+    const b = await ask("Daily backup: save today's copy of the diary to the phone? It protects the log if the browser data is cleared.", [{label:"Save backup", value:true, primary:true}, {label:"Later", value:false}], {noCancel:true, soft:true});
     if (b) await doBackup(); else addMsg("bot","Okay. Type \"backup\" any time.");
   }
 }
@@ -957,9 +1050,9 @@ function undoLast(){
   renderDiary();
 }
 function describe(e){
-  const when = " ("+prettyDate(e.date)+", "+timeLabel(e.time)+")";
+  const when = " ("+prettyDate(e.date)+(e.time ? ", "+timeLabel(e.time) : "")+")";
   if (e.kind==="missed") return "missed "+e.label+" ("+prettyDate(e.date)+")";
-  if (e.kind==="meal") return cap(e.meal)+" time"+when;
+  if (e.kind==="meal") return cap(e.meal)+(e.time ? " time" : " skipped")+when;
   if (e.kind==="sugar") return e.label+" sugar "+e.value+" mg/dL"+when+(e.meal && e.meal.time ? " – "+e.meal.note : "");
   return "insulin "+doseText(e)+" "+e.units+" units"+when;
 }
@@ -1045,7 +1138,8 @@ function cellFor(col, date){
   }
   if (col.kind === "meal"){
     const e = mealEntry(date, col.meal);
-    return e ? {lines:[timeLabel(e.time)], status:"meal"} : {lines:["-"], status:""};
+    if (!e) return {lines:["-"], status:""};
+    return e.time ? {lines:[timeLabel(e.time)], status:"meal"} : {lines:["Skipped"], status:"miss"};
   }
   if (col.kind === "ins"){
     const e = shotFor(date, col.item);
@@ -1080,7 +1174,7 @@ function entryRows(){
     const d = prettyDate(e.date);
     if (e.kind==="sugar"){ const st = statusOf(e.value,e.label); return {cells:[d, timeLabel(e.time), "Sugar", e.label, e.value, label[st], "", "", "", e.meal && e.meal.time ? timeLabel(e.meal.time) : "", e.meal && e.meal.gap!=null ? e.meal.gap : "", e.meal ? e.meal.note : "", e.filled ? "Entered later" : ""], status: st}; }
     if (e.kind==="insulin") return {cells:[d, timeLabel(e.time), "Insulin", doseText(e), "", "", e.units, e.prescribed==null?"":e.prescribed, e.drug||"", "", "", "", (e.filled ? "Entered later. " : "")+(e.prescribed!=null && e.prescribed!==e.units ? "Different from prescription" : "")], status:"ins"};
-    if (e.kind==="meal") return {cells:[d, timeLabel(e.time), "Meal", cap(e.meal), "", "", "", "", "", timeLabel(e.time), "", "", ""], status:"meal"};
+    if (e.kind==="meal") return {cells:[d, e.time ? timeLabel(e.time) : "", "Meal", cap(e.meal), "", "", "", "", "", e.time ? timeLabel(e.time) : "Skipped", "", "", e.time ? "" : "Meal skipped"], status: e.time ? "meal" : "miss"};
     return {cells:[d, "", "Missed", e.label, "", "", "", "", "", "", "", "", "Marked as missed / not taken"], status:"miss"};
   });
 }
